@@ -6,6 +6,8 @@
 <title>App Pessoal Dione</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
+<link rel="manifest" id="manifestLink">
+<meta name="theme-color" content="#0F3D3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -289,7 +291,7 @@ async function unlockWithBiometric(){
     }});
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
-    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly();
+    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); handleQuickAction();
   }catch(e){ document.getElementById('lockErr').textContent = "Digital não reconhecida"; }
 }
 
@@ -303,7 +305,12 @@ function requestNotifPermission(){
 }
 function fireNotify(title, body){
   if(("Notification" in window) && Notification.permission==='granted'){
-    try{ new Notification(title, {body, icon:undefined}); return; }catch(e){}
+    if(navigator.serviceWorker && navigator.serviceWorker.ready){
+      navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,{body})).catch(()=>{ try{ new Notification(title,{body}); }catch(e){} });
+    } else {
+      try{ new Notification(title, {body}); }catch(e){}
+    }
+    return;
   }
   toast(`🔔 ${title}: ${body}`);
 }
@@ -371,6 +378,7 @@ function tryUnlock(){
     checkBackupReminder();
     checkDueAlerts();
     checkSpendingAnomaly();
+    handleQuickAction();
   } else {
     document.getElementById('lockErr').textContent = "Senha incorreta";
   }
@@ -1499,6 +1507,33 @@ let currentTab = "situacao";
 let calRef = new Date();
 document.getElementById('lockTitle').textContent = "App Pessoal Dione";
 refreshBioUI();
+
+/* ================= PWA: MANIFEST + SERVICE WORKER + ATALHO ================= */
+(function setupManifest(){
+  const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E";
+  const manifest = {
+    name: "App Pessoal Dione",
+    short_name: "Dione",
+    start_url: "./index.html",
+    display: "standalone",
+    background_color: "#0F3D3E",
+    theme_color: "#0F3D3E",
+    icons: [{ src: iconSvg, sizes: "any", type: "image/svg+xml", purpose: "any" }],
+    shortcuts: [
+      { name: "Novo lançamento", short_name: "Novo", url: "./index.html?action=quickadd", description: "Registrar uma despesa rapidamente" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+  const link = document.getElementById('manifestLink');
+  if(link) link.href = URL.createObjectURL(blob);
+})();
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+function handleQuickAction(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('action')==='quickadd'){ setTimeout(()=>openLancForm(), 300); }
+}
 
 </script>
 </body>
