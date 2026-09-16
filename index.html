@@ -135,6 +135,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
     <div class="lockErr" id="lockErr"></div>
     <input type="password" id="lockInput" inputmode="numeric" maxlength="12" placeholder="••••">
     <button class="btn block" onclick="tryUnlock()" style="background:var(--teal)">Entrar</button>
+    <button class="btn block outline" id="bioBtn" style="display:none;margin-top:10px" onclick="unlockWithBiometric()">👆 Entrar com digital</button>
     <div class="lockHint" id="lockHint" onclick="forgotPw()">Esqueci a senha (redefinir localmente)</div>
   </div>
 </div>
@@ -152,6 +153,8 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
     <div id="navList"></div>
     <div class="drawerFoot">
       <button class="drawerAction" onclick="toggleDarkMode()">🌙 Alternar modo escuro</button>
+<button class="drawerAction" id="bioToggleBtn" onclick="toggleBiometric()">🔐 Ativar entrada por digital</button>
+<button class="drawerAction" id="notifToggleBtn" onclick="requestNotifPermission()">🔔 Ativar notificações de vencimento</button>
 <button class="drawerAction" onclick="exportBackup()">⬇️ Exportar backup</button>
       <button class="drawerAction" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button>
       <button class="drawerAction" onclick="resetAllData()" style="color:#ffb3a7">🗑️ Apagar todos os dados</button>
@@ -242,6 +245,121 @@ function checkBackupReminder(){
   if(diffDays>=7) setTimeout(()=>toast(`💡 Já fazem ${diffDays} dias desde o último backup. Considere exportar.`), 600);
 }
 
+/* ================= BIOMETRIA (digital / Face ID local) ================= */
+function bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function b64ToBuf(b64){ const bin = atob(b64); const buf = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i); return buf; }
+function bioSupported(){ return !!(window.PublicKeyCredential && navigator.credentials); }
+function bioRegistered(){ return !!localStorage.getItem('dioneBioCredId'); }
+function refreshBioUI(){
+  const btn = document.getElementById('bioBtn');
+  const toggleBtn = document.getElementById('bioToggleBtn');
+  if(btn) btn.style.display = (bioSupported() && bioRegistered()) ? 'block':'none';
+  if(toggleBtn) toggleBtn.textContent = bioRegistered() ? '🔐 Desativar entrada por digital' : '🔐 Ativar entrada por digital';
+}
+async function toggleBiometric(){
+  if(!bioSupported()){ toast("Este navegador/aparelho não suporta digital"); return; }
+  if(bioRegistered()){
+    localStorage.removeItem('dioneBioCredId');
+    toast("Entrada por digital desativada");
+    refreshBioUI(); toggleDrawer(false);
+    return;
+  }
+  try{
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp: { name: "App Pessoal Dione" },
+      user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "dione", displayName: "Dione" },
+      pubKeyCredParams: [{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+      timeout: 60000, attestation: "none"
+    }});
+    localStorage.setItem('dioneBioCredId', bufToB64(cred.rawId));
+    toast("Digital ativada! Use-a na próxima vez que entrar.");
+  }catch(e){ toast("Não foi possível ativar a digital"); }
+  refreshBioUI(); toggleDrawer(false);
+}
+async function unlockWithBiometric(){
+  const credId = localStorage.getItem('dioneBioCredId');
+  if(!credId) return;
+  try{
+    await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      allowCredentials: [{ id: b64ToBuf(credId), type: 'public-key' }],
+      userVerification: 'required', timeout: 60000
+    }});
+    document.getElementById('lockScreen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly();
+  }catch(e){ document.getElementById('lockErr').textContent = "Digital não reconhecida"; }
+}
+
+/* ================= NOTIFICAÇÕES DE VENCIMENTO ================= */
+function requestNotifPermission(){
+  if(!("Notification" in window)){ toast("Notificações não suportadas neste navegador"); toggleDrawer(false); return; }
+  Notification.requestPermission().then(p=>{
+    toast(p==='granted' ? "Notificações ativadas" : "Permissão de notificações negada");
+  });
+  toggleDrawer(false);
+}
+function fireNotify(title, body){
+  if(("Notification" in window) && Notification.permission==='granted'){
+    try{ new Notification(title, {body, icon:undefined}); return; }catch(e){}
+  }
+  toast(`🔔 ${title}: ${body}`);
+}
+let _dueAlertedToday = null;
+function checkDueAlerts(){
+  const today = todayStr();
+  if(_dueAlertedToday===today) return;
+  _dueAlertedToday = today;
+  const pending = allPendingCommitments().filter(p=>p.type!=='entrada');
+  const dueSoon = pending.filter(p=>{
+    const diff = Math.round((new Date(p.date+"T00:00:00") - new Date(today+"T00:00:00"))/86400000);
+    return diff===0 || diff===2;
+  });
+  if(!dueSoon.length) return;
+  const hojeItems = dueSoon.filter(p=>p.date===today);
+  const doisDiasItems = dueSoon.filter(p=>p.date!==today);
+  if(hojeItems.length) fireNotify("Vence hoje", hojeItems.map(p=>`${p.desc} (${fmt(p.amount)})`).join(', '));
+  if(doisDiasItems.length) fireNotify("Vence em 2 dias", doisDiasItems.map(p=>`${p.desc} (${fmt(p.amount)})`).join(', '));
+}
+
+/* ================= ALERTA DE GASTO FORA DO PADRÃO ================= */
+let _anomalyCheckedToday = null;
+function checkSpendingAnomaly(){
+  const today = todayStr();
+  if(_anomalyCheckedToday===today) return;
+  _anomalyCheckedToday = today;
+  const ym = today.slice(0,7);
+  const [y,m] = ym.split('-').map(Number);
+  const pastMonths = [];
+  for(let i=1;i<=3;i++){
+    let mm=m-i, yy=y; while(mm<=0){ mm+=12; yy-=1; }
+    pastMonths.push(`${yy}-${String(mm).padStart(2,'0')}`);
+  }
+  const byCatCurrent = {};
+  activeLanc().filter(l=>l.applied && l.type==='saida' && l.date.slice(0,7)===ym).forEach(l=>{ byCatCurrent[l.category]=(byCatCurrent[l.category]||0)+Number(l.amount||0); });
+  const byCatPast = {};
+  pastMonths.forEach(pm=>{
+    activeLanc().filter(l=>l.applied && l.type==='saida' && l.date.slice(0,7)===pm).forEach(l=>{
+      byCatPast[l.category]=(byCatPast[l.category]||0)+Number(l.amount||0);
+    });
+  });
+  const dayOfMonth = Number(today.slice(8,10));
+  const daysInMonth = new Date(y,m,0).getDate();
+  const paceRatio = daysInMonth / Math.max(dayOfMonth,1);
+  const warnings = [];
+  Object.keys(byCatCurrent).forEach(cat=>{
+    const avgPast = (byCatPast[cat]||0) / 3;
+    if(avgPast<30) return;
+    const projected = byCatCurrent[cat] * paceRatio;
+    if(projected > avgPast * 1.4){
+      warnings.push(`${cat}: ritmo de ${fmt(projected)} este mês vs média de ${fmt(avgPast)}`);
+    }
+  });
+  if(warnings.length) setTimeout(()=>toast(`⚠️ Gasto acima do normal em: ${warnings[0]}`), 1400);
+}
+
 /* ================= LOCK ================= */
 function tryUnlock(){
   const val = document.getElementById('lockInput').value;
@@ -251,6 +369,8 @@ function tryUnlock(){
     runAuto();
     render();
     checkBackupReminder();
+    checkDueAlerts();
+    checkSpendingAnomaly();
   } else {
     document.getElementById('lockErr').textContent = "Senha incorreta";
   }
@@ -466,13 +586,13 @@ function render(){
   };
   c.innerHTML = renderers[currentTab]();
   const fab = document.getElementById('fabBtn');
-  fab.style.display = ['lancamentos','caixinhas'].includes(currentTab) ? 'flex':'none';
+  fab.style.display = 'flex';
   if(currentTab==='calendario') drawCalendar();
   if(currentTab==='situacao'){ drawProjectionChart('chartSituacao', 12); drawCategoryPie('chartPizza'); }
 }
 function fabAction(){
-  if(currentTab==='lancamentos') openLancForm();
-  else if(currentTab==='caixinhas') openBoxForm();
+  if(currentTab==='caixinhas') openBoxForm();
+  else openLancForm();
 }
 
 /* ================= SITUAÇÃO ================= */
@@ -1378,6 +1498,7 @@ function closeSheet(){ document.getElementById('sheet').classList.remove('show')
 let currentTab = "situacao";
 let calRef = new Date();
 document.getElementById('lockTitle').textContent = "App Pessoal Dione";
+refreshBioUI();
 
 </script>
 </body>
