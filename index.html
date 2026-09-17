@@ -280,7 +280,8 @@ async function toggleBiometric(){
   }catch(e){ toast("Não foi possível ativar a digital"); }
   refreshBioUI(); toggleDrawer(false);
 }
-async function unlockWithBiometric(){
+async function unlockWithBiometric(retryCount){
+  retryCount = retryCount || 0;
   const credId = localStorage.getItem('dioneBioCredId');
   const errEl = document.getElementById('lockErr');
   if(!credId){
@@ -294,7 +295,7 @@ async function unlockWithBiometric(){
     return;
   }
   errEl.style.color = 'var(--ink-soft)';
-  errEl.textContent = "Abrindo leitor de digital...";
+  errEl.textContent = retryCount ? "Tentando de novo..." : "Abrindo leitor de digital...";
   const timeoutGuard = setTimeout(()=>{
     errEl.style.color = 'var(--red)';
     errEl.textContent = "O leitor de digital não abriu. Tente de novo ou use a senha.";
@@ -311,6 +312,11 @@ async function unlockWithBiometric(){
     runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); handleQuickAction();
   }catch(e){
     clearTimeout(timeoutGuard);
+    const isTransient = e && e.name === 'OperationError';
+    if(isTransient && retryCount < 1){
+      setTimeout(()=>unlockWithBiometric(retryCount+1), 400);
+      return;
+    }
     errEl.style.color = 'var(--red)';
     errEl.textContent = "Digital não reconhecida (" + (e && e.name ? e.name : 'erro') + ")";
   }
