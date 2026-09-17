@@ -272,7 +272,7 @@ async function toggleBiometric(){
       rp: { name: "App Pessoal Dione" },
       user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "dione", displayName: "Dione" },
       pubKeyCredParams: [{type:"public-key",alg:-7},{type:"public-key",alg:-257}],
-      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "preferred" },
       timeout: 60000, attestation: "none"
     }});
     localStorage.setItem('dioneBioCredId', bufToB64(cred.rawId));
@@ -282,17 +282,38 @@ async function toggleBiometric(){
 }
 async function unlockWithBiometric(){
   const credId = localStorage.getItem('dioneBioCredId');
-  if(!credId) return;
+  const errEl = document.getElementById('lockErr');
+  if(!credId){
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = "Digital não está cadastrada neste aparelho/navegador. Ative de novo no menu.";
+    return;
+  }
+  if(!bioSupported()){
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = "Este navegador não suporta digital agora.";
+    return;
+  }
+  errEl.style.color = 'var(--ink-soft)';
+  errEl.textContent = "Abrindo leitor de digital...";
+  const timeoutGuard = setTimeout(()=>{
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = "O leitor de digital não abriu. Tente de novo ou use a senha.";
+  }, 8000);
   try{
     await navigator.credentials.get({ publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       allowCredentials: [{ id: b64ToBuf(credId), type: 'public-key' }],
-      userVerification: 'required', timeout: 60000
+      userVerification: 'preferred', timeout: 60000
     }});
+    clearTimeout(timeoutGuard);
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); handleQuickAction();
-  }catch(e){ document.getElementById('lockErr').textContent = "Digital não reconhecida"; }
+  }catch(e){
+    clearTimeout(timeoutGuard);
+    errEl.style.color = 'var(--red)';
+    errEl.textContent = "Digital não reconhecida (" + (e && e.name ? e.name : 'erro') + ")";
+  }
 }
 
 /* ================= NOTIFICAÇÕES DE VENCIMENTO ================= */
