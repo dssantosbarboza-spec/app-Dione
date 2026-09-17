@@ -517,33 +517,14 @@ function unapplyLancEffect(l){
   l.applied = false;
 }
 function runAutoLancamentos(){
-  const today = todayStr();
-  let changed = false;
-  activeLanc().forEach(l=>{
-    if(!l.applied && l.date && l.date<=today){
-      applyLancEffect(l);
-      logHist(`${l.type==='entrada'?'Entrada':'Saída'} vencida aplicada: ${l.desc} (${fmt(l.amount)})`);
-      changed = true;
-    }
-  });
-  if(changed) save();
+  // Alterado: lançamentos previstos NÃO são mais aplicados automaticamente
+  // apenas por a data ter chegado. O usuário precisa confirmar manualmente
+  // (botão "Aplicar agora"), para o saldo só sair quando o pagamento
+  // realmente aconteceu.
 }
 function runAutoDebts(){
-  const today = todayStr();
-  let changed = false;
-  state.debts.forEach(d=>{
-    if(!d.paid && d.dueDate && d.dueDate<=today){
-      state.saldo -= Number(d.amount||0);
-      d.paid = true;
-      const lc = {id:uid('lc'),type:'saida',desc:`Dívida: ${d.desc}`,category:'Dívidas',amount:Number(d.amount||0),date:d.dueDate,purchaseDate:d.dueDate,status:'realizado',installments:1,installmentNum:1,groupId:null,cardId:null,receipt:null,trashed:false,applied:true};
-      state.lancamentos.push(lc);
-      d._lancId = lc.id;
-      logHist(`Dívida vencida abatida automaticamente: ${d.desc} (${fmt(d.amount)})`);
-      pushMovement('debito', `Dívida: ${d.desc}`, d.amount);
-      changed = true;
-    }
-  });
-  if(changed) save();
+  // Alterado: dívidas não são mais quitadas automaticamente por a data
+  // ter passado. Use o botão "Quitar agora" para confirmar o pagamento.
 }
 function runAuto(){ runAutoLancamentos(); runAutoDebts(); }
 
