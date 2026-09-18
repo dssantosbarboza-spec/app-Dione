@@ -157,6 +157,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
       <button class="drawerAction" onclick="toggleDarkMode()">🌙 Alternar modo escuro</button>
 <button class="drawerAction" id="bioToggleBtn" onclick="toggleBiometric()">🔐 Ativar entrada por digital</button>
 <button class="drawerAction" id="notifToggleBtn" onclick="requestNotifPermission()">🔔 Ativar notificações de vencimento</button>
+<button class="drawerAction" onclick="startVoiceQuery()">🎤 Falar com a Didi</button>
 <button class="drawerAction" onclick="exportBackup()">⬇️ Exportar backup</button>
       <button class="drawerAction" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button>
       <button class="drawerAction" onclick="resetAllData()" style="color:#ffb3a7">🗑️ Apagar todos os dados</button>
@@ -859,6 +860,70 @@ function onLancTypeChange(){
   document.getElementById('parceladoBlock').style.display = type==='saida' ? 'block':'none';
   updateParcPreview();
 }
+/* ================= CONSULTA POR VOZ (entradas/saídas do mês) ================= */
+function startVoiceQuery(){
+  toggleDrawer(false);
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!Rec){ toast('Reconhecimento de voz não é suportado neste navegador'); return; }
+  const rec = new Rec();
+  rec.lang = 'pt-BR'; rec.continuous = false; rec.interimResults = false;
+  toast('🎙️ Didi está ouvindo... pergunte, ex: "Didi, quanto eu tenho" ou "Didi, o que tem pra pagar esse mês"');
+  try{ rec.start(); }catch(e){ toast('Não foi possível abrir o microfone.'); return; }
+  rec.onresult = (e)=>{ answerVoiceQuery(e.results[0][0].transcript.toLowerCase()); };
+  rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); };
+}
+function falarComoAle(texto){
+  if("speechSynthesis" in window){
+    try{
+      const utter = new SpeechSynthesisUtterance(texto);
+      utter.lang = 'pt-BR';
+      window.speechSynthesis.speak(utter);
+    }catch(e){}
+  }
+}
+const MONTH_NAMES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function extractMonthFromText(text){
+  const norm = text.normalize('NFD').replace(/[\u0300-\u036f]/g,''); // remove acentos p/ comparar
+  const namesNorm = MONTH_NAMES_PT.map(n=>n.normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+  for(let i=0;i<namesNorm.length;i++){
+    if(norm.includes(namesNorm[i])){
+      const yearMatch = text.match(/(20\d{2})/);
+      const year = yearMatch ? parseInt(yearMatch[1]) : new Date().getFullYear();
+      return `${year}-${String(i+1).padStart(2,'0')}`;
+    }
+  }
+  return null;
+}
+function formatMonthLabel(ym){
+  const [y,m] = ym.split('-').map(Number);
+  return `${MONTH_NAMES_PT[m-1]} de ${y}`;
+}
+function answerVoiceQuery(text){
+  const wantsSaldo = /quanto.*(tenho|tem|sobrou)|saldo|meu saldo|quanto.*disponível|quanto.*disponivel/.test(text);
+  if(wantsSaldo){
+    openSheet('Seu saldo', `<div class="row"><span><b>Saldo disponível</b></span><b style="font-size:18px">${fmt(state.saldo)}</b></div>`);
+    falarComoAle(`Didi: você tem ${fmt(state.saldo)} disponível agora.`);
+    return;
+  }
+  const ym = extractMonthFromText(text) || todayStr().slice(0,7);
+  const mesLabel = formatMonthLabel(ym);
+  let type = null;
+  if(text.includes('pagar') || text.includes('saíd') || text.includes('said') || text.includes('gasto') || text.includes('despes')) type='saida';
+  else if(text.includes('receber') || text.includes('entrad') || text.includes('receb')) type='entrada';
+  if(!type){ toast('A Didi não entendeu se é sobre entradas, saídas ou saldo. Tente: "Didi, saídas do mês" ou "Didi, quanto eu tenho".'); return; }
+  const wantsPrevisto = /previst|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
+  let items = activeLanc().filter(l=>l.type===type && l.date && l.date.slice(0,7)===ym);
+  items = items.filter(l=> wantsPrevisto ? !l.applied : l.applied);
+  items.sort((a,b)=>a.date.localeCompare(b.date));
+  const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
+  let label;
+  if(wantsPrevisto) label = type==='saida' ? `Previsto para pagar em ${mesLabel}` : `Previsto para receber em ${mesLabel}`;
+  else label = type==='saida' ? `Saídas de ${mesLabel}` : `Entradas de ${mesLabel}`;
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
+  openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
+  falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
+}
+
 /* ================= LANÇAMENTO POR VOZ ================= */
 function parseVoiceLanc(text){
   const lower = text.toLowerCase();
