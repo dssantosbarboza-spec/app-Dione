@@ -803,6 +803,8 @@ function openLancForm(id, presetCardId, presetDate){
   const it = id? state.lancamentos.find(l=>l.id===id) : {desc:'',category:CATS_OUT[0],amount:'',date:presetDate||todayStr(),status:'previsto',type:'saida',installments:1,cardId:presetCardId||'',receipt:null};
   const cats = it.type==='entrada' ? state.categoriesIn : state.categoriesOut;
   openSheet(`${id?'Editar':'Novo'} lançamento`, `
+    <button type="button" class="btn block outline" id="voiceBtn" onclick="startVoiceLanc()" style="margin-bottom:6px">🎤 Preencher por voz</button>
+    <div class="muted" id="voiceStatus" style="display:none;margin-bottom:10px"></div>
     <label class="f">Tipo</label><select class="f" id="f_type_es" onchange="onLancTypeChange()">
       <option value="saida" ${it.type==='saida'?'selected':''}>Saída (despesa)</option>
       <option value="entrada" ${it.type==='entrada'?'selected':''}>Entrada (receita)</option>
@@ -839,6 +841,48 @@ function onLancTypeChange(){
   document.getElementById('f_cat').innerHTML = cats.map(c=>`<option>${c}</option>`).join('');
   document.getElementById('parceladoBlock').style.display = type==='saida' ? 'block':'none';
   updateParcPreview();
+}
+/* ================= LANÇAMENTO POR VOZ ================= */
+function parseVoiceLanc(text){
+  const lower = text.toLowerCase();
+  const inWords = ['recebi','ganhei','entrou','caiu','depositaram','depósito','salário','vendi'];
+  const outWords = ['gastei','paguei','comprei','saiu','desembolsei','gasto'];
+  let type = null;
+  if(inWords.some(w=>lower.includes(w))) type='entrada';
+  else if(outWords.some(w=>lower.includes(w))) type='saida';
+  let amount = null, amountMatchStr = '';
+  const m = lower.match(/(\d+(?:[.,]\d{1,2})?)/);
+  if(m){ amount = parseFloat(m[1].replace(',','.')); amountMatchStr = m[0]; }
+  let desc = text;
+  [...inWords, ...outWords].forEach(w=>{ desc = desc.replace(new RegExp(w,'ig'), ''); });
+  if(amountMatchStr) desc = desc.replace(amountMatchStr, '');
+  desc = desc.replace(/reais|real|r\$|centavos|centavo/ig,'').replace(/\s+/g,' ').trim();
+  desc = desc.replace(/^(de|do|da|no|na|em|com)\s+/i,'').trim();
+  if(desc) desc = desc.charAt(0).toUpperCase()+desc.slice(1);
+  return {type, amount, desc};
+}
+function startVoiceLanc(){
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const statusEl = document.getElementById('voiceStatus');
+  if(!Rec){ toast('Reconhecimento de voz não é suportado neste navegador'); return; }
+  const rec = new Rec();
+  rec.lang = 'pt-BR';
+  rec.continuous = false;
+  rec.interimResults = false;
+  statusEl.style.display='block';
+  statusEl.textContent = '🎙️ Ouvindo... fale, ex: "gastei 45 reais no mercado"';
+  try{ rec.start(); }catch(e){ statusEl.textContent='Não foi possível abrir o microfone.'; return; }
+  rec.onresult = (e)=>{
+    const text = e.results[0][0].transcript;
+    statusEl.textContent = `Entendi: "${text}" — confira os campos abaixo`;
+    const parsed = parseVoiceLanc(text);
+    const typeEl = document.getElementById('f_type_es');
+    if(parsed.type && typeEl){ typeEl.value = parsed.type; onLancTypeChange(); }
+    if(parsed.desc){ const d = document.getElementById('f_desc'); if(d){ d.value = parsed.desc; suggestCategory(); } }
+    if(parsed.amount!=null){ const a = document.getElementById('f_amount'); if(a){ a.value = parsed.amount; updateParcPreview(); } }
+    setTimeout(()=>{ statusEl.style.display='none'; }, 4000);
+  };
+  rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
 }
 function suggestCategory(){
   const descEl = document.getElementById('f_desc');
