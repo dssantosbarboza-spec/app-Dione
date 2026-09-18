@@ -884,20 +884,55 @@ function startVoiceLanc(){
   };
   rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
 }
+const CATEGORY_KEYWORDS = {
+  'Alimentação': ['almoço','almoco','jantar','lanche','restaurante','ifood','pizza','comida','padaria','café da manhã','marmita','hamburguer','hambúrguer'],
+  'Supermercado': ['mercado','supermercado','feira','hortifruti'],
+  'Transporte': ['uber','99','ônibus','onibus','metrô','metro','táxi','taxi','passagem'],
+  'Combustível': ['gasolina','combustível','combustivel','posto','álcool','etanol'],
+  'Saúde': ['médico','medico','consulta','hospital','clínica','clinica','exame','dentista'],
+  'Farmácia': ['farmácia','farmacia','remédio','remedio'],
+  'Luz': ['luz','energia','eletricidade'],
+  'Água': ['água','agua'],
+  'Gás': ['gás','gas de cozinha','botijão','botijao'],
+  'Internet': ['internet','wifi','wi-fi'],
+  'Telefone': ['celular','telefone'],
+  'Lazer': ['cinema','show','bar','balada','festa','parque'],
+  'Assinaturas/Streaming': ['netflix','spotify','streaming','assinatura','disney','amazon prime'],
+  'Vestuário': ['roupa','sapato','tênis','tenis','calça','camisa'],
+  'Pets': ['pet','ração','racao','veterinário','veterinario','petshop'],
+  'Educação': ['curso','faculdade','escola','livro','mensalidade'],
+  'Beleza/Cuidados pessoais': ['salão','salao','cabelo','manicure','barbearia','barbeiro'],
+  'Jogos/Loterias': ['loteria','aposta','jogo do bicho','mega-sena','lotofácil','lotofacil'],
+  'Cigarros': ['cigarro','tabaco'],
+};
+function guessCategoryByKeyword(desc, cats){
+  const lower = (desc||'').toLowerCase();
+  for(const [cat, words] of Object.entries(CATEGORY_KEYWORDS)){
+    if(cats.includes(cat) && words.some(w=>lower.includes(w))) return cat;
+  }
+  return null;
+}
 function suggestCategory(){
   const descEl = document.getElementById('f_desc');
   const catEl = document.getElementById('f_cat');
   const typeEl = document.getElementById('f_type_es');
   if(!descEl || !catEl || !typeEl) return;
-  const desc = descEl.value.trim().toLowerCase();
+  const descRaw = descEl.value.trim();
+  const desc = descRaw.toLowerCase();
   if(desc.length<3) return;
   const type = typeEl.value;
   const candidates = state.lancamentos.filter(l=>!l.trashed && l.type===type && l.desc && l.desc.toLowerCase().includes(desc));
-  if(!candidates.length) return;
-  const freq = {};
-  candidates.forEach(l=> freq[l.category]=(freq[l.category]||0)+1);
-  const best = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
-  if([...catEl.options].some(o=>o.value===best)) catEl.value = best;
+  let best = null;
+  if(candidates.length){
+    const freq = {};
+    candidates.forEach(l=> freq[l.category]=(freq[l.category]||0)+1);
+    best = Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0];
+  }
+  if(!best){
+    const cats = [...catEl.options].map(o=>o.value);
+    best = guessCategoryByKeyword(descRaw, cats);
+  }
+  if(best && [...catEl.options].some(o=>o.value===best)) catEl.value = best;
 }
 function updateParcPreview(){
   const typeEl = document.getElementById('f_type_es');
