@@ -309,7 +309,7 @@ async function unlockWithBiometric(retryCount){
     clearTimeout(timeoutGuard);
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
-    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); handleQuickAction();
+    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); handleQuickAction();
   }catch(e){
     clearTimeout(timeoutGuard);
     const isTransient = e && e.name === 'OperationError';
@@ -394,6 +394,22 @@ function checkSpendingAnomaly(){
   if(warnings.length) setTimeout(()=>toast(`⚠️ Gasto acima do normal em: ${warnings[0]}`), 1400);
 }
 
+/* ================= LEMBRETE DE FECHAMENTO MENSAL ================= */
+let _fechamentoRemindedToday = null;
+function checkFechamentoReminder(){
+  const today = todayStr();
+  if(_fechamentoRemindedToday===today) return;
+  _fechamentoRemindedToday = today;
+  const [y,m,d] = today.split('-').map(Number);
+  const lastDay = new Date(y,m,0).getDate();
+  const isClosingDay = (d===30) || (lastDay<30 && d===lastDay);
+  if(!isClosingDay) return;
+  const monthKey = today.slice(0,7);
+  if(localStorage.getItem('dioneFechamentoRemindedMonth')===monthKey) return;
+  localStorage.setItem('dioneFechamentoRemindedMonth', monthKey);
+  setTimeout(()=>fireNotify("Fechamento mensal", "Hoje é dia de gerar o fechamento do mês e exportar por e-mail."), 2200);
+}
+
 /* ================= LOCK ================= */
 function tryUnlock(){
   const val = document.getElementById('lockInput').value;
@@ -405,6 +421,7 @@ function tryUnlock(){
     checkBackupReminder();
     checkDueAlerts();
     checkSpendingAnomaly();
+    checkFechamentoReminder();
     handleQuickAction();
   } else {
     document.getElementById('lockErr').textContent = "Senha incorreta";
@@ -1492,6 +1509,46 @@ function renderRelatorios(){
 
 /* ================= FECHAMENTO MENSAL ================= */
 let fechMonth = todayStr().slice(0,7);
+function topDescricoes(m, type, n){
+  const map = {};
+  activeLanc().filter(l=>l.type===type && l.date.slice(0,7)===m).forEach(l=>{
+    const key = (l.desc||'(sem descrição)').trim() || '(sem descrição)';
+    map[key] = (map[key]||0) + Number(l.amount||0);
+  });
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,n);
+}
+function buildFechamentoEmailText(m, totalEntrou, totalSaiu, entradasCategoria, saidasCategoria, saldoFinal){
+  const totalMov = totalEntrou + totalSaiu;
+  const pctEntrada = totalMov>0 ? (totalEntrou/totalMov*100) : 0;
+  const pctSaida = totalMov>0 ? (totalSaiu/totalMov*100) : 0;
+  const pctSobra = totalEntrou>0 ? ((totalEntrou-totalSaiu)/totalEntrou*100) : 0;
+  const topIn = topDescricoes(m,'entrada',10);
+  const topOut = topDescricoes(m,'saida',10);
+  let t = `FECHAMENTO MENSAL — ${m}\n\n`;
+  t += `Total que entrou: ${fmt(totalEntrou)}\n`;
+  t += `Total que saiu: ${fmt(totalSaiu)}\n`;
+  t += `Resultado do mês: ${fmt(totalEntrou-totalSaiu)}\n\n`;
+  t += `PERCENTUAIS\n`;
+  t += `Entradas: ${pctEntrada.toFixed(1)}% do total movimentado\n`;
+  t += `Saídas: ${pctSaida.toFixed(1)}% do total movimentado\n`;
+  t += `Sobrou (sobre o que entrou): ${pctSobra.toFixed(1)}%\n\n`;
+  t += `ENTRADAS POR CATEGORIA\n`;
+  t += (entradasCategoria.length ? entradasCategoria.map(x=>`- ${x.name}: ${fmt(x.total)}`).join('\n') : '(sem entradas)');
+  t += `\n\nSAÍDAS POR CATEGORIA\n`;
+  t += (saidasCategoria.length ? saidasCategoria.map(x=>`- ${x.name}: ${fmt(x.total)}`).join('\n') : '(sem saídas)');
+  t += `\n\nPRINCIPAIS ENTRADAS (por nome/descrição)\n`;
+  t += (topIn.length ? topIn.map(([n2,v])=>`- ${n2}: ${fmt(v)}`).join('\n') : '(nenhuma)');
+  t += `\n\nPRINCIPAIS SAÍDAS (por nome/descrição)\n`;
+  t += (topOut.length ? topOut.map(([n2,v])=>`- ${n2}: ${fmt(v)}`).join('\n') : '(nenhuma)');
+  t += `\n\nSaldo final (na data do fechamento): ${fmt(saldoFinal)}\n`;
+  t += `\n— Enviado pelo App Pessoal Dione`;
+  return t;
+}
+function enviarFechamentoPorEmail(){
+  if(!window._lastFechamentoEmail){ toast('Gere o fechamento primeiro'); return; }
+  const {subject, body} = window._lastFechamentoEmail;
+  window.location.href = `mailto:dssantosbarboza@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 function renderFechamento(){
   return `<div class="card"><h3>Fechamento mensal</h3>
     <label class="f">Mês de referência</label><input class="f" type="month" value="${fechMonth}" onchange="fechMonth=this.value;render()">
@@ -1526,7 +1583,9 @@ function gerarFechamento(){
     <hr class="sep"><b>Compromissos do mês</b>${compromissos.length?compromissos.map(x=>`<div class="row"><span>${x.desc}</span><b>${fmt(x.amount)}</b></div>`).join(''):'<div class="muted">Nenhum</div>'}
     <hr class="sep"><div class="row"><span><b>Saldo final (hoje)</b></span><b class="big" style="font-size:18px">${fmt(saldoFinal)}</b></div>
     <button class="btn block" style="margin-top:12px" onclick="salvarFechamento(${saldoFinal})">Salvar este fechamento</button>
+    <button class="btn block outline" style="margin-top:10px" onclick="enviarFechamentoPorEmail()">📧 Exportar para e-mail</button>
   </div>`;
+  window._lastFechamentoEmail = { subject: `Fechamento mensal - ${m}`, body: buildFechamentoEmailText(m, totalEntrou, totalSaiu, entradasCategoria, saidasCategoria, saldoFinal) };
   document.getElementById('fechResult').innerHTML = html;
 }
 function salvarFechamento(saldoFinal){
