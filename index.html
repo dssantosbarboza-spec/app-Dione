@@ -913,11 +913,14 @@ function formatMonthLabel(ym){
   return `${MONTH_NAMES_PT[m-1]} de ${y}`;
 }
 function answerVoiceQuery(text){
-  const actionWords = ['dar','nova','novo','registrar','lançar','lancar','cadastrar','abrir','adicionar'];
-  const hasAction = actionWords.some(w=>text.includes(w));
+  const actionWords = ['dar','da ','de entrada','de saída','de saida','quero','vou','anotar','anota','lançar','lancar','lançamento','lancamento','registrar','cadastrar','nova','novo','colocar','coloca','inserir','abrir','adicionar'];
+  const queryWords = ['mes','mês','quanto','saldo','quais','foram','previst','pra pagar','pra receber'];
   const hasEntradaWord = text.includes('entrada');
   const hasSaidaWord = text.includes('saida') || text.includes('saída');
-  if(hasAction && (hasEntradaWord || hasSaidaWord)){
+  const hasQueryWord = queryWords.some(w=>text.includes(w));
+  const isShort = text.trim().split(/\s+/).length<=3;
+  const hasAction = actionWords.some(w=>text.includes(w)) || isShort;
+  if(!hasQueryWord && hasAction && (hasEntradaWord || hasSaidaWord)){
     const type = hasSaidaWord ? 'saida' : 'entrada';
     openLancForm();
     const typeEl = document.getElementById('f_type_es');
