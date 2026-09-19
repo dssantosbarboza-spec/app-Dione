@@ -914,7 +914,7 @@ function formatMonthLabel(ym){
 }
 function answerVoiceQuery(text){
   const actionWords = ['dar','da ','de entrada','de saída','de saida','quero','vou','anotar','anota','lançar','lancar','lançamento','lancamento','registrar','cadastrar','nova','novo','colocar','coloca','inserir','abrir','adicionar'];
-  const queryWords = ['mes','mês','quanto','saldo','quais','foram','previst','pra pagar','pra receber'];
+  const queryWords = ['mes','mês','quanto','saldo','quais','foram','previs','pra pagar','pra receber'];
   const hasEntradaWord = text.includes('entrada');
   const hasSaidaWord = text.includes('saida') || text.includes('saída');
   const hasQueryWord = queryWords.some(w=>text.includes(w));
@@ -936,10 +936,10 @@ function answerVoiceQuery(text){
   const ym = extractMonthFromText(text) || todayStr().slice(0,7);
   const mesLabel = formatMonthLabel(ym);
   let type = null;
-  if(text.includes('pagar') || text.includes('saíd') || text.includes('said') || text.includes('gasto') || text.includes('despes')) type='saida';
-  else if(text.includes('receber') || text.includes('entrad') || text.includes('receb')) type='entrada';
+  if(text.includes('pagar') || text.includes('pagamento') || text.includes('saíd') || text.includes('said') || text.includes('gasto') || text.includes('despes')) type='saida';
+  else if(text.includes('receber') || text.includes('recebimento') || text.includes('entrad') || text.includes('receb')) type='entrada';
   if(!type){ toast('A Didi não entendeu se é sobre entradas, saídas ou saldo. Tente: "Didi, saídas do mês" ou "Didi, quanto eu tenho".'); return; }
-  const wantsPrevisto = /previst|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
+  const wantsPrevisto = /previs|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
   const catList = type==='saida' ? CATS_OUT : CATS_IN;
   const categoria = extractCategoryFromText(text, catList);
   let items = activeLanc().filter(l=>l.type===type && l.date && l.date.slice(0,7)===ym);
