@@ -924,7 +924,11 @@ function startVoiceQuery(){
   rec.lang = 'pt-BR'; rec.continuous = false; rec.interimResults = false;
   toast('🎙️ Didi está ouvindo... pergunte, ex: "Didi, quanto eu tenho" ou "Didi, o que tem pra pagar esse mês"');
   try{ rec.start(); }catch(e){ toast('Não foi possível abrir o microfone.'); return; }
-  rec.onresult = (e)=>{ answerVoiceQuery(e.results[0][0].transcript.toLowerCase()); };
+  rec.onresult = (e)=>{
+    const heard = e.results[0][0].transcript.toLowerCase();
+    toast(`🎙️ Ouvi: "${heard}"`);
+    setTimeout(()=>answerVoiceQuery(heard), 900);
+  };
   rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); };
 }
 function falarComoAle(texto){
@@ -988,7 +992,7 @@ function enviarPrevistoWhatsApp(){
   window.open(`https://wa.me/?text=${encodeURIComponent(window._lastWhatsPrevisto)}`, '_blank');
 }
 function answerVoiceQuery(text){
-  const wantsWhatsShare = /whatsapp|zap/.test(text) && /enviar|mandar|compartilh/.test(text) && /previst|despes|gasto/.test(text);
+  const wantsWhatsShare = /whats ?app|whatzap|zap ?zap|\bzap\b|uatsap/.test(text) && /enviar|mandar|compartilh/.test(text) && /previst|despes|gasto/.test(text);
   if(wantsWhatsShare){ handleWhatsAppPrevistoRequest(text); return; }
   if(/apag|exclu|remov|delet/.test(text) && /ultim/.test(text)){
     undoLast();
