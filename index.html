@@ -992,7 +992,9 @@ function enviarPrevistoWhatsApp(){
   window.open(`https://wa.me/?text=${encodeURIComponent(window._lastWhatsPrevisto)}`, '_blank');
 }
 function answerVoiceQuery(text){
-  const wantsWhatsShare = /whats ?app|whatzap|zap ?zap|\bzap\b|uatsap/.test(text) && /enviar|mandar|compartilh/.test(text) && /previst|despes|gasto/.test(text);
+  const hasEnviarWord = /enviar|mandar|compartilh/.test(text);
+  const hasDespesaWord = /despes|gasto|previst/.test(text);
+  const wantsWhatsShare = hasEnviarWord && hasDespesaWord;
   if(wantsWhatsShare){ handleWhatsAppPrevistoRequest(text); return; }
   if(/apag|exclu|remov|delet/.test(text) && /ultim/.test(text)){
     undoLast();
@@ -1117,7 +1119,7 @@ const CATEGORY_KEYWORDS = {
   'Presentes': ['presente'],
 };
 function normalizeText(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-const NAME_ALIASES = { 'alessandra':'ale', 'ale':'ale', 'dione':'dione' };
+const NAME_ALIASES = { 'alessandra':'alessandra', 'ale':'alessandra', 'ali':'alessandra', 'alê':'alessandra', 'dione':'dione' };
 function extractPersonFromText(text){
   const norm = normalizeText(text);
   for(const [spoken, term] of Object.entries(NAME_ALIASES)){
