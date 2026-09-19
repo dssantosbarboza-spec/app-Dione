@@ -953,7 +953,43 @@ function formatMonthLabel(ym){
   const [y,m] = ym.split('-').map(Number);
   return `${MONTH_NAMES_PT[m-1]} de ${y}`;
 }
+function handleWhatsAppPrevistoRequest(text){
+  const mentionsGeral = /geral|gerais|todos os meses|tudo previsto/.test(text);
+  const monthFromSpeech = extractMonthFromText(text);
+  const person = extractPersonFromText(text);
+  let items = activeLanc().filter(l=>l.type==='saida' && !l.applied);
+  if(person) items = items.filter(l=>(l.desc||'').toLowerCase().includes(person));
+  let periodoLabel;
+  if(monthFromSpeech){
+    items = items.filter(l=>l.date && l.date.slice(0,7)===monthFromSpeech);
+    periodoLabel = formatMonthLabel(monthFromSpeech);
+  } else if(mentionsGeral){
+    periodoLabel = 'todos os períodos';
+  } else {
+    const ymNow = todayStr().slice(0,7);
+    items = items.filter(l=>l.date && l.date.slice(0,7)===ymNow);
+    periodoLabel = formatMonthLabel(ymNow);
+  }
+  if(person) periodoLabel = `${person.charAt(0).toUpperCase()+person.slice(1)} — ${periodoLabel}`;
+  items.sort((a,b)=>a.date.localeCompare(b.date));
+  const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
+  const linhas = items.map(l=>`- ${l.desc||'(sem descrição)'} (${l.category}) — ${fmt(l.amount)} — ${l.date.split('-').reverse().join('/')}`).join('\n');
+  const texto = `*Despesas previstas — ${periodoLabel}*\n\n${linhas || '(nenhuma despesa prevista)'}\n\n*Total: ${fmt(total)}*`;
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nenhuma despesa prevista</div>';
+  window._lastWhatsPrevisto = texto;
+  openSheet(`Despesas previstas — ${periodoLabel}`, `
+    <div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}
+    <button class="btn block outline" style="margin-top:14px" onclick="enviarPrevistoWhatsApp()">📤 Enviar por WhatsApp</button>
+  `);
+  falarComoAle(`Didi: preparei a lista de despesas previstas, ${periodoLabel}. Total de ${fmt(total)}. Pode enviar por WhatsApp na tela.`);
+}
+function enviarPrevistoWhatsApp(){
+  if(!window._lastWhatsPrevisto){ toast('Gere a lista primeiro'); return; }
+  window.open(`https://wa.me/?text=${encodeURIComponent(window._lastWhatsPrevisto)}`, '_blank');
+}
 function answerVoiceQuery(text){
+  const wantsWhatsShare = /whatsapp|zap/.test(text) && /enviar|mandar|compartilh/.test(text) && /previst|despes|gasto/.test(text);
+  if(wantsWhatsShare){ handleWhatsAppPrevistoRequest(text); return; }
   if(/apag|exclu|remov|delet/.test(text) && /ultim/.test(text)){
     undoLast();
     falarComoAle('Didi: último lançamento desfeito.');
@@ -988,15 +1024,18 @@ function answerVoiceQuery(text){
   const wantsPrevisto = /previs|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
   const catList = type==='saida' ? CATS_OUT : CATS_IN;
   const categoria = extractCategoryFromText(text, catList);
+  const person = extractPersonFromText(text);
   let items = activeLanc().filter(l=>l.type===type && l.date && l.date.slice(0,7)===ym);
   if(categoria) items = items.filter(l=>l.category===categoria);
+  if(person) items = items.filter(l=>(l.desc||'').toLowerCase().includes(person));
   items = items.filter(l=> wantsPrevisto ? !l.applied : l.applied);
   items.sort((a,b)=>a.date.localeCompare(b.date));
   const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
   let base;
   if(wantsPrevisto) base = type==='saida' ? 'Previsto para pagar' : 'Previsto para receber';
   else base = type==='saida' ? 'Saídas' : 'Entradas';
-  const label = categoria ? `${base} — ${categoria} — ${mesLabel}` : `${base} de ${mesLabel}`;
+  let label = categoria ? `${base} — ${categoria} — ${mesLabel}` : `${base} de ${mesLabel}`;
+  if(person) label += ` — ${person.charAt(0).toUpperCase()+person.slice(1)}`;
   const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
   falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
@@ -1074,6 +1113,14 @@ const CATEGORY_KEYWORDS = {
   'Presentes': ['presente'],
 };
 function normalizeText(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+const NAME_ALIASES = { 'alessandra':'ale', 'ale':'ale', 'dione':'dione' };
+function extractPersonFromText(text){
+  const norm = normalizeText(text);
+  for(const [spoken, term] of Object.entries(NAME_ALIASES)){
+    if(new RegExp(`\\b${spoken}\\b`).test(norm)) return term;
+  }
+  return null;
+}
 function extractCategoryFromText(text, cats){
   const norm = normalizeText(text);
   for(const cat of cats){
