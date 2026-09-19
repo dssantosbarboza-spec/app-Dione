@@ -1027,8 +1027,10 @@ function answerVoiceQuery(text){
     falarComoAle(`Didi: você tem ${fmt(state.saldo)} disponível agora.`);
     return;
   }
-  const ym = extractMonthFromText(text) || todayStr().slice(0,7);
-  const mesLabel = formatMonthLabel(ym);
+  const monthFromSpeech = extractMonthFromText(text);
+  const mentionsGeral = /geral|gerais|todos os meses|tudo previsto|tudo mesmo/.test(text);
+  const ym = monthFromSpeech || todayStr().slice(0,7);
+  const mesLabel = (!monthFromSpeech && mentionsGeral) ? 'todos os períodos' : formatMonthLabel(ym);
   let type = null;
   if(text.includes('pagar') || text.includes('pagamento') || text.includes('saíd') || text.includes('said') || text.includes('gasto') || text.includes('despes')) type='saida';
   else if(text.includes('receber') || text.includes('recebimento') || text.includes('entrad') || text.includes('receb')) type='entrada';
@@ -1038,7 +1040,8 @@ function answerVoiceQuery(text){
   const categoria = extractCategoryFromText(text, catList);
   const person = extractPersonFromText(text);
   const freeTerm = (!categoria && !person) ? extractFreeSearchTerm(text) : null;
-  let items = activeLanc().filter(l=>l.type===type && l.date && l.date.slice(0,7)===ym);
+  let items = activeLanc().filter(l=>l.type===type);
+  if(monthFromSpeech || !mentionsGeral) items = items.filter(l=>l.date && l.date.slice(0,7)===ym);
   if(categoria) items = items.filter(l=>l.category===categoria);
   if(person) items = items.filter(l=>(l.desc||'').toLowerCase().includes(person));
   if(freeTerm) items = items.filter(l=>normalizeText(l.desc||'').includes(freeTerm));
