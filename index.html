@@ -156,10 +156,12 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
     <div id="navList"></div>
     <div class="drawerFoot">
       <button class="drawerAction" onclick="toggleDarkMode()">🌙 Alternar modo escuro</button>
+<button class="drawerAction" onclick="toggleDarkAuto()">🌗 Modo escuro automático (à noite)</button>
 <button class="drawerAction" id="bioToggleBtn" onclick="toggleBiometric()">🔐 Ativar entrada por digital</button>
 <button class="drawerAction" id="notifToggleBtn" onclick="requestNotifPermission()">🔔 Ativar notificações de vencimento</button>
 <button class="drawerAction" onclick="startVoiceQuery()">🎤 Falar com a Didi</button>
 <button class="drawerAction" onclick="exportBackup()">⬇️ Exportar backup</button>
+<button class="drawerAction" onclick="exportCSV()">📊 Exportar CSV (Excel)</button>
       <button class="drawerAction" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button>
       <button class="drawerAction" onclick="resetAllData()" style="color:#ffb3a7">🗑️ Apagar todos os dados</button>
       <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
@@ -203,10 +205,12 @@ const DEFAULT_STATE = () => ({
   trash: [],
   closings: [],
   undoSnapshots: [],
+  categoryBudgets: {},
 });
 
 let state = load();
 if(state.pendingSalaryDeduction===undefined) state.pendingSalaryDeduction = 0;
+if(!state.categoryBudgets) state.categoryBudgets = {};
 function load(){
   try{ const raw = localStorage.getItem("dioneData2"); if(raw) return JSON.parse(raw); }catch(e){}
   return DEFAULT_STATE();
@@ -235,9 +239,24 @@ function undoLast(){
 function toggleDarkMode(){
   document.body.classList.toggle('dark');
   localStorage.setItem('dioneDark', document.body.classList.contains('dark')?'1':'0');
+  localStorage.setItem('dioneDarkAuto','0');
   toggleDrawer(false);
 }
+function toggleDarkAuto(){
+  const isAuto = localStorage.getItem('dioneDarkAuto')==='1';
+  localStorage.setItem('dioneDarkAuto', isAuto ? '0' : '1');
+  applyAutoDarkMode();
+  toast(isAuto ? 'Modo escuro automático desativado' : 'Modo escuro automático ativado (18h às 6h)');
+  toggleDrawer(false);
+}
+function applyAutoDarkMode(){
+  if(localStorage.getItem('dioneDarkAuto')!=='1') return;
+  const hour = new Date().getHours();
+  const shouldBeDark = (hour>=18 || hour<6);
+  document.body.classList.toggle('dark', shouldBeDark);
+}
 function loadDarkMode(){
+  if(localStorage.getItem('dioneDarkAuto')==='1'){ applyAutoDarkMode(); return; }
   if(localStorage.getItem('dioneDark')==='1') document.body.classList.add('dark');
 }
 loadDarkMode();
@@ -312,7 +331,7 @@ async function unlockWithBiometric(retryCount){
     clearTimeout(timeoutGuard);
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
-    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); handleQuickAction();
+    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); handleQuickAction();
   }catch(e){
     clearTimeout(timeoutGuard);
     const isTransient = e && e.name === 'OperationError';
@@ -397,6 +416,27 @@ function checkSpendingAnomaly(){
   if(warnings.length) setTimeout(()=>toast(`⚠️ Gasto acima do normal em: ${warnings[0]}`), 1400);
 }
 
+/* ================= RESUMO DIÁRIO FALADO (à noite) ================= */
+let _resumoDiarioHoje = null;
+function checkResumoDiario(){
+  const today = todayStr();
+  if(_resumoDiarioHoje===today) return;
+  const hour = new Date().getHours();
+  if(hour<18) return;
+  if(localStorage.getItem('dioneResumoDiarioDia')===today) return;
+  _resumoDiarioHoje = today;
+  localStorage.setItem('dioneResumoDiarioDia', today);
+  const hoje = activeLanc().filter(l=>l.applied && l.date===today);
+  const gasto = hoje.filter(l=>l.type==='saida').reduce((s,l)=>s+Number(l.amount||0),0);
+  const recebido = hoje.filter(l=>l.type==='entrada').reduce((s,l)=>s+Number(l.amount||0),0);
+  if(!hoje.length) return;
+  let texto = `Didi: resumo do dia. `;
+  if(gasto>0) texto += `Você gastou ${fmt(gasto)} hoje. `;
+  if(recebido>0) texto += `Recebeu ${fmt(recebido)} hoje. `;
+  texto += `Seu saldo atual é ${fmt(state.saldo)}.`;
+  setTimeout(()=>falarComoAle(texto), 3000);
+}
+
 /* ================= LEMBRETE DE FECHAMENTO MENSAL ================= */
 let _fechamentoRemindedToday = null;
 function checkFechamentoReminder(){
@@ -425,6 +465,7 @@ function tryUnlock(){
     checkDueAlerts();
     checkSpendingAnomaly();
     checkFechamentoReminder();
+    checkResumoDiario();
     handleQuickAction();
   } else {
     document.getElementById('lockErr').textContent = "Senha incorreta";
@@ -858,7 +899,7 @@ function openLancForm(id, presetCardId, presetDate){
       <label class="f">Cartão (opcional — só se for compra no cartão)</label>
       <select class="f" id="f_card"><option value="">Nenhum (saldo direto)</option>${state.cards.map(c=>`<option value="${c.id}" ${c.id===it.cardId?'selected':''}>${c.name}</option>`).join('')}</select>
     </div>
-    <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*">
+    <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*" capture="environment">
     ${it.receipt?'<div class="muted">Já existe um comprovante anexado.</div>':''}
     <div class="muted" style="margin-top:6px">ℹ️ "Realizado" abate/credita na hora. "Previsto" só aplica quando a data chegar, ou toque em "Aplicar agora" na lista pra antecipar. Compras em cartão com fechamento configurado calculam a data de vencimento automaticamente.</div>
     <div style="display:flex;gap:10px;margin-top:16px">
@@ -913,6 +954,11 @@ function formatMonthLabel(ym){
   return `${MONTH_NAMES_PT[m-1]} de ${y}`;
 }
 function answerVoiceQuery(text){
+  if(/apag|exclu|remov|delet/.test(text) && /ultim/.test(text)){
+    undoLast();
+    falarComoAle('Didi: último lançamento desfeito.');
+    return;
+  }
   const actionWords = ['dar','da ','de entrada','de saída','de saida','quero','vou','anotar','anota','lançar','lancar','lançamento','lancamento','registrar','cadastrar','nova','novo','colocar','coloca','inserir','abrir','adicionar'];
   const queryWords = ['mes','mês','quanto','saldo','quais','foram','previs','pra pagar','pra receber'];
   const hasEntradaWord = text.includes('entrada');
@@ -1588,10 +1634,60 @@ function showCalDay(iso){
 /* ================= RELATÓRIOS ================= */
 let repView = "entradasCategoria";
 let repMonth = "";
+function setCategoryBudget(cat, val){
+  const n = parseFloat(String(val||'0').replace(',','.'));
+  if(!state.categoryBudgets) state.categoryBudgets = {};
+  if(n>0) state.categoryBudgets[cat] = n; else delete state.categoryBudgets[cat];
+  save(); render();
+}
+function saldoEvolutionData(monthsBack){
+  const today = todayStr();
+  const points = [];
+  for(let i=monthsBack-1;i>=0;i--){
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-i);
+    const y = d.getFullYear(), m = d.getMonth()+1;
+    const lastDay = new Date(y,m,0).getDate();
+    const endOfMonth = `${y}-${String(m).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+    const cutoff = endOfMonth < today ? endOfMonth : today;
+    const netAfter = activeLanc().filter(l=>l.applied && l.date>cutoff).reduce((s,l)=> s + (l.type==='entrada'? Number(l.amount||0) : -Number(l.amount||0)), 0);
+    points.push({ label: `${MONTH_NAMES_PT[m-1].slice(0,3)}/${String(y).slice(2)}`, value: state.saldo - netAfter });
+  }
+  return points;
+}
+function drawSaldoEvolutionChart(canvasId){
+  const canvas = document.getElementById(canvasId); if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.parentElement.clientWidth; canvas.width = w; canvas.height = 170;
+  ctx.clearRect(0,0,w,170);
+  const isDark = document.body.classList.contains('dark');
+  const points = saldoEvolutionData(6);
+  const vals = points.map(p=>p.value);
+  const min = Math.min(0, ...vals), max = Math.max(...vals, 1);
+  const pad = 30, plotW = w - pad*2, plotH = 120;
+  const xStep = plotW / (points.length-1 || 1);
+  ctx.strokeStyle = isDark ? '#3a4a48' : '#D9D4C4'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, 10+plotH); ctx.lineTo(pad+plotW, 10+plotH); ctx.stroke();
+  ctx.strokeStyle = '#C9973A'; ctx.lineWidth = 2; ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x = pad + i*xStep;
+    const y = 10 + plotH - ((p.value-min)/(max-min||1))*plotH;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = isDark? '#EDEAE0':'#132C2A'; ctx.font = '10px Inter'; ctx.textAlign='center';
+  points.forEach((p,i)=>{
+    const x = pad + i*xStep;
+    const y = 10 + plotH - ((p.value-min)/(max-min||1))*plotH;
+    ctx.fillStyle = '#0F3D3E'; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = isDark? '#EDEAE0':'#132C2A';
+    ctx.fillText(p.label, x, 10+plotH+16);
+  });
+}
 function renderRelatorios(){
   const views = [
     ["entradasCategoria","Entradas por categoria"], ["saidasCategoria","Saídas por categoria"],
-    ["cartoes","Cartões"], ["parcelas","Parcelas"], ["caixinhas","Caixinhas"], ["compromissos","Compromissos"], ["evolucao","Evolução financeira"],
+    ["cartoes","Cartões"], ["parcelas","Parcelas"], ["caixinhas","Caixinhas"], ["compromissos","Compromissos"], ["evolucao","Projeção"],
+    ["evolucaoSaldo","Evolução do saldo"], ["metas","Metas por categoria"],
   ];
   const matchMonth = (dateStr) => !repMonth || (dateStr && dateStr.slice(0,7)===repMonth);
   let body = '';
@@ -1611,8 +1707,25 @@ function renderRelatorios(){
     body = c.length? c.map(i=>`<div class="row"><span>${i.desc}</span><b>${i.type==='entrada'?'+':''}${fmt(i.amount)} · ${fmtDate(i.date)}</b></div>`).join(''):'<div class="emptyState">Nenhum compromisso</div>';
   } else if(repView==='evolucao'){
     body = `<canvas id="repChart" height="150"></canvas><div class="muted" style="margin-top:8px">Projeção com base na média de entradas e saídas já realizadas.</div>`;
+  } else if(repView==='evolucaoSaldo'){
+    body = `<canvas id="saldoEvoChart" height="170"></canvas><div class="muted" style="margin-top:8px">Saldo reconstruído com base nos lançamentos aplicados dos últimos 6 meses.</div>`;
+  } else if(repView==='metas'){
+    const ymMeta = todayStr().slice(0,7);
+    body = state.categoriesOut.map(c=>{
+      const budget = Number(state.categoryBudgets[c]||0);
+      const spent = activeLanc().filter(l=>l.applied && l.type==='saida' && l.category===c && l.date && l.date.slice(0,7)===ymMeta).reduce((s,l)=>s+Number(l.amount||0),0);
+      const pct = budget>0 ? Math.min(100, Math.round(spent/budget*100)) : 0;
+      const over = budget>0 && spent>budget;
+      return `<div style="margin-bottom:16px">
+        <div class="row"><span>${c}</span><input class="f" style="width:110px;text-align:right;padding:6px 8px" type="number" inputmode="decimal" value="${budget||''}" placeholder="Meta R$" onchange="setCategoryBudget('${c}', this.value)"></div>
+        ${budget>0 ? `<div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%;background:${over?'var(--red)':'var(--teal)'}"></div></div></div><div class="muted" style="font-size:11px">${fmt(spent)} de ${fmt(budget)} (${pct}%)${over?' — acima da meta!':''}</div>` : ''}
+      </div>`;
+    }).join('');
   }
-  setTimeout(()=>{ if(repView==='evolucao') drawProjectionChart('repChart',12); },0);
+  setTimeout(()=>{
+    if(repView==='evolucao') drawProjectionChart('repChart',12);
+    if(repView==='evolucaoSaldo') drawSaldoEvolutionChart('saldoEvoChart');
+  },0);
   return `<div class="card"><h3>Relatórios</h3>
     <label class="f">Filtrar por mês (deixe em branco para tudo)</label><input class="f" type="month" value="${repMonth}" onchange="repMonth=this.value;render()">
     <div class="tabs" style="margin-top:10px">${views.map(v=>`<button class="${repView===v[0]?'active':''}" onclick="repView='${v[0]}';render()">${v[1]}</button>`).join('')}</div></div>
@@ -1666,6 +1779,12 @@ function enviarFechamentoPorEmail(){
   const {subject, body} = window._lastFechamentoEmail;
   window.location.href = `mailto:dssantosbarboza@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
+function enviarFechamentoPorWhatsApp(){
+  if(!window._lastFechamentoEmail){ toast('Gere o fechamento primeiro'); return; }
+  const {subject, body} = window._lastFechamentoEmail;
+  const texto = `*${subject}*\n\n${body}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+}
 function renderFechamento(){
   return `<div class="card"><h3>Fechamento mensal</h3>
     <label class="f">Mês de referência</label><input class="f" type="month" value="${fechMonth}" onchange="fechMonth=this.value;render()">
@@ -1701,6 +1820,7 @@ function gerarFechamento(){
     <hr class="sep"><div class="row"><span><b>Saldo final (hoje)</b></span><b class="big" style="font-size:18px">${fmt(saldoFinal)}</b></div>
     <button class="btn block" style="margin-top:12px" onclick="salvarFechamento(${saldoFinal})">Salvar este fechamento</button>
     <button class="btn block outline" style="margin-top:10px" onclick="enviarFechamentoPorEmail()">📧 Exportar para e-mail</button>
+    <button class="btn block outline" style="margin-top:10px" onclick="enviarFechamentoPorWhatsApp()">💬 Exportar para WhatsApp</button>
   </div>`;
   window._lastFechamentoEmail = { subject: `Fechamento mensal - ${m}`, body: buildFechamentoEmailText(m, totalEntrou, totalSaiu, entradasCategoria, saidasCategoria, saldoFinal) };
   document.getElementById('fechResult').innerHTML = html;
@@ -1712,6 +1832,28 @@ function salvarFechamento(saldoFinal){
 }
 
 /* ================= BACKUP (EXPORTAR / IMPORTAR) ================= */
+function exportCSV(){
+  const rows = [['Data','Tipo','Descrição','Categoria','Valor','Status','Cartão']];
+  activeLanc().slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(l=>{
+    rows.push([
+      l.date ? l.date.split('-').reverse().join('/') : '',
+      l.type==='entrada'?'Entrada':'Saída',
+      (l.desc||'').replace(/"/g,'""'),
+      l.category||'',
+      String(l.amount||0).replace('.',','),
+      l.applied?'Realizado':'Previsto',
+      l.cardId ? (state.cards.find(c=>c.id===l.cardId)?.name||'') : ''
+    ]);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(';')).join('\r\n');
+  const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `dione-lancamentos-${todayStr()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toggleDrawer(false);
+}
 function exportBackup(){
   const data = JSON.stringify(state, null, 2);
   const blob = new Blob([data], {type:"application/json"});
