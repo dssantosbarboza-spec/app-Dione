@@ -663,8 +663,8 @@ function renderSituacao(){
   </div>
   <div class="card">
     <h3>Quanto posso gastar</h3>
-    <div class="big" style="color:${podeGastar>=0?'var(--green)':'var(--red)'}">${fmt(podeGastar)}</div>
-    <div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%"></div></div></div>
+    <div class="big" style="color:${podeGastar>=0?'var(--green)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(podeGastar)}</div>
+    ${isSaldoHidden() ? '' : `<div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%"></div></div></div>`}
     <div class="muted" style="margin-top:6px">Diferente do saldo disponível: aqui já descontamos saídas previstas, parcela do empréstimo e dívidas com vencimento neste mês (mesmo que a data já tenha passado e ainda não tenha sido paga).</div>
   </div>
   <div class="grid2">
