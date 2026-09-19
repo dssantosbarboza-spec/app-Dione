@@ -668,10 +668,10 @@ function renderSituacao(){
     <div class="muted" style="margin-top:6px">Diferente do saldo disponível: aqui já descontamos saídas previstas, parcela do empréstimo e dívidas com vencimento neste mês (mesmo que a data já tenha passado e ainda não tenha sido paga).</div>
   </div>
   <div class="grid2">
-    <div class="card"><h3>Recebido este mês</h3><div class="big" style="font-size:19px;color:var(--green)">${fmt(recebidoMes)}</div></div>
-    <div class="card"><h3>Pago este mês</h3><div class="big" style="font-size:19px;color:var(--red)">${fmt(pagoMes)}</div></div>
+    <div class="card"><h3>Recebido este mês</h3><div class="big" style="font-size:19px;color:var(--green)">${isSaldoHidden() ? '••••••' : fmt(recebidoMes)}</div></div>
+    <div class="card"><h3>Pago este mês</h3><div class="big" style="font-size:19px;color:var(--red)">${isSaldoHidden() ? '••••••' : fmt(pagoMes)}</div></div>
   </div>
-  <div class="card"><h3>Patrimônio total</h3><div class="big" style="font-size:19px">${fmt(patrimonioTotal())}</div><div class="muted">saldo + caixinhas − dívidas − empréstimo</div></div>
+  <div class="card"><h3>Patrimônio total</h3><div class="big" style="font-size:19px">${isSaldoHidden() ? '••••••' : fmt(patrimonioTotal())}</div><div class="muted">saldo + caixinhas − dívidas − empréstimo</div></div>
   <div class="card">
     <h3>Cartões</h3>
     ${state.cards.map(c=>{
