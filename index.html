@@ -961,8 +961,12 @@ function handleWhatsAppPrevistoRequest(text){
   const mentionsGeral = /geral|gerais|todos os meses|tudo previsto/.test(text);
   const monthFromSpeech = extractMonthFromText(text);
   const person = extractPersonFromText(text);
+  const categoria = extractCategoryFromText(text, CATS_OUT);
+  const freeTerm = (!categoria && !person) ? extractFreeSearchTerm(text) : null;
   let items = activeLanc().filter(l=>l.type==='saida' && !l.applied);
+  if(categoria) items = items.filter(l=>l.category===categoria);
   if(person) items = items.filter(l=>(l.desc||'').toLowerCase().includes(person));
+  if(freeTerm) items = items.filter(l=>normalizeText(l.desc||'').includes(freeTerm));
   let periodoLabel;
   if(monthFromSpeech){
     items = items.filter(l=>l.date && l.date.slice(0,7)===monthFromSpeech);
@@ -974,7 +978,9 @@ function handleWhatsAppPrevistoRequest(text){
     items = items.filter(l=>l.date && l.date.slice(0,7)===ymNow);
     periodoLabel = formatMonthLabel(ymNow);
   }
+  if(categoria) periodoLabel = `${categoria} — ${periodoLabel}`;
   if(person) periodoLabel = `${person.charAt(0).toUpperCase()+person.slice(1)} — ${periodoLabel}`;
+  if(freeTerm) periodoLabel = `"${freeTerm}" — ${periodoLabel}`;
   items.sort((a,b)=>a.date.localeCompare(b.date));
   const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
   const linhas = items.map(l=>`- ${l.desc||'(sem descrição)'} (${l.category}) — ${fmt(l.amount)} — ${l.date.split('-').reverse().join('/')}`).join('\n');
@@ -1031,9 +1037,11 @@ function answerVoiceQuery(text){
   const catList = type==='saida' ? CATS_OUT : CATS_IN;
   const categoria = extractCategoryFromText(text, catList);
   const person = extractPersonFromText(text);
+  const freeTerm = (!categoria && !person) ? extractFreeSearchTerm(text) : null;
   let items = activeLanc().filter(l=>l.type===type && l.date && l.date.slice(0,7)===ym);
   if(categoria) items = items.filter(l=>l.category===categoria);
   if(person) items = items.filter(l=>(l.desc||'').toLowerCase().includes(person));
+  if(freeTerm) items = items.filter(l=>normalizeText(l.desc||'').includes(freeTerm));
   items = items.filter(l=> wantsPrevisto ? !l.applied : l.applied);
   items.sort((a,b)=>a.date.localeCompare(b.date));
   const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
@@ -1042,6 +1050,7 @@ function answerVoiceQuery(text){
   else base = type==='saida' ? 'Saídas' : 'Entradas';
   let label = categoria ? `${base} — ${categoria} — ${mesLabel}` : `${base} de ${mesLabel}`;
   if(person) label += ` — ${person.charAt(0).toUpperCase()+person.slice(1)}`;
+  if(freeTerm) label += ` — "${freeTerm}"`;
   const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
   falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
@@ -1137,6 +1146,12 @@ function extractCategoryFromText(text, cats){
     if(words.some(w=>norm.includes(normalizeText(w)))) return cat;
   }
   return null;
+}
+const VOICE_STOPWORDS = new Set(['didi','quais','foram','as','os','de','do','da','em','no','na','pra','para','este','esse','esta','essa','mes','mês','ano','despesas','despesa','gastos','gasto','saidas','saida','saída','saídas','entradas','entrada','previsto','previstos','previstas','previsao','previsão','pagar','receber','pagamento','pagamentos','recebimento','recebimentos','geral','gerais','todos','todas','tudo','quero','vou','o','a','que','tem','tenho','com','e','me','fala','diz','por','favor','enviar','mandar','compartilhar','compartilhe','whatsapp','zap','ultimo','ultima','apague','exclua','remova','delete', ...MONTH_NAMES_PT]);
+function extractFreeSearchTerm(text){
+  const norm = normalizeText(text);
+  const words = norm.split(/\s+/).map(w=>w.replace(/[^\wçã]/gi,'')).filter(w=>w.length>2 && !VOICE_STOPWORDS.has(normalizeText(w)));
+  return words.length ? words.join(' ') : null;
 }
 function guessCategoryByKeyword(desc, cats){
   const lower = (desc||'').toLowerCase();
