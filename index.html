@@ -632,6 +632,15 @@ function fabAction(){
 }
 
 /* ================= SITUAÇÃO ================= */
+/* ================= OCULTAR/MOSTRAR SALDO ================= */
+function isSaldoHidden(){
+  const v = localStorage.getItem('dioneSaldoHidden');
+  return v===null ? true : v==='1';
+}
+function toggleSaldoVisivel(){
+  localStorage.setItem('dioneSaldoHidden', isSaldoHidden() ? '0' : '1');
+  render();
+}
 function renderSituacao(){
   const saldo = state.saldo;
   const podeGastar = quantoPodeGastar();
@@ -645,8 +654,11 @@ function renderSituacao(){
   }).slice(0,6);
   return `
   <div class="card">
-    <h3>Saldo disponível</h3>
-    <div class="big" style="color:${saldo>=0?'var(--ink)':'var(--red)'}">${fmt(saldo)}</div>
+    <h3 style="display:flex;align-items:center;justify-content:space-between">
+      <span>Saldo disponível</span>
+      <button onclick="toggleSaldoVisivel()" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px">${isSaldoHidden()?'🙈':'👁️'}</button>
+    </h3>
+    <div class="big" style="color:${saldo>=0?'var(--ink)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(saldo)}</div>
     <div class="muted">Único saldo geral — soma tudo que já entrou e saiu</div>
   </div>
   <div class="card">
