@@ -913,6 +913,17 @@ function formatMonthLabel(ym){
   return `${MONTH_NAMES_PT[m-1]} de ${y}`;
 }
 function answerVoiceQuery(text){
+  const actionWords = ['dar','nova','novo','registrar','lançar','lancar','cadastrar','abrir','adicionar'];
+  const hasAction = actionWords.some(w=>text.includes(w));
+  const hasEntradaWord = text.includes('entrada');
+  const hasSaidaWord = text.includes('saida') || text.includes('saída');
+  if(hasAction && (hasEntradaWord || hasSaidaWord)){
+    const type = hasSaidaWord ? 'saida' : 'entrada';
+    openLancForm();
+    const typeEl = document.getElementById('f_type_es');
+    if(typeEl){ typeEl.value = type; onLancTypeChange(); }
+    return;
+  }
   const wantsSaldo = /quanto.*(tenho|tem|sobrou)|saldo|meu saldo|quanto.*disponível|quanto.*disponivel/.test(text);
   if(wantsSaldo){
     openSheet('Seu saldo', `<div class="row"><span><b>Saldo disponível</b></span><b style="font-size:18px">${fmt(state.saldo)}</b></div>`);
@@ -926,13 +937,17 @@ function answerVoiceQuery(text){
   else if(text.includes('receber') || text.includes('entrad') || text.includes('receb')) type='entrada';
   if(!type){ toast('A Didi não entendeu se é sobre entradas, saídas ou saldo. Tente: "Didi, saídas do mês" ou "Didi, quanto eu tenho".'); return; }
   const wantsPrevisto = /previst|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
+  const catList = type==='saida' ? CATS_OUT : CATS_IN;
+  const categoria = extractCategoryFromText(text, catList);
   let items = activeLanc().filter(l=>l.type===type && l.date && l.date.slice(0,7)===ym);
+  if(categoria) items = items.filter(l=>l.category===categoria);
   items = items.filter(l=> wantsPrevisto ? !l.applied : l.applied);
   items.sort((a,b)=>a.date.localeCompare(b.date));
   const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
-  let label;
-  if(wantsPrevisto) label = type==='saida' ? `Previsto para pagar em ${mesLabel}` : `Previsto para receber em ${mesLabel}`;
-  else label = type==='saida' ? `Saídas de ${mesLabel}` : `Entradas de ${mesLabel}`;
+  let base;
+  if(wantsPrevisto) base = type==='saida' ? 'Previsto para pagar' : 'Previsto para receber';
+  else base = type==='saida' ? 'Saídas' : 'Entradas';
+  const label = categoria ? `${base} — ${categoria} — ${mesLabel}` : `${base} de ${mesLabel}`;
   const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
   falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
@@ -1000,7 +1015,27 @@ const CATEGORY_KEYWORDS = {
   'Beleza/Cuidados pessoais': ['salão','salao','cabelo','manicure','barbearia','barbeiro'],
   'Jogos/Loterias': ['loteria','aposta','jogo do bicho','mega-sena','lotofácil','lotofacil'],
   'Cigarros': ['cigarro','tabaco'],
+  'Cartão': ['cartão de crédito','cartao de credito','fatura do cartão','fatura do cartao','cartão','cartao'],
+  'Empréstimo': ['empréstimo','emprestimo'],
+  'Dívidas': ['dívida','divida','dívidas','dividas'],
+  'Caixinha': ['caixinha','caixinhas'],
+  'Condomínio': ['condomínio','condominio'],
+  'Manutenção': ['manutenção','manutencao','conserto','reparo'],
+  'Impostos/Taxas': ['imposto','taxa','ipva','iptu'],
+  'Presentes': ['presente'],
 };
+function normalizeText(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function extractCategoryFromText(text, cats){
+  const norm = normalizeText(text);
+  for(const cat of cats){
+    if(norm.includes(normalizeText(cat))) return cat;
+  }
+  for(const [cat, words] of Object.entries(CATEGORY_KEYWORDS)){
+    if(!cats.includes(cat)) continue;
+    if(words.some(w=>norm.includes(normalizeText(w)))) return cat;
+  }
+  return null;
+}
 function guessCategoryByKeyword(desc, cats){
   const lower = (desc||'').toLowerCase();
   for(const [cat, words] of Object.entries(CATEGORY_KEYWORDS)){
