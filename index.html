@@ -324,7 +324,15 @@ function checkBackupReminder(){
 }
 
 /* ================= BIOMETRIA (digital / Face ID local) ================= */
-function bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function bufToB64(buf){
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunkSize){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunkSize));
+  }
+  return btoa(binary);
+}
 function b64ToBuf(b64){ const bin = atob(b64); const buf = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i); return buf; }
 function bioSupported(){ return !!(window.PublicKeyCredential && navigator.credentials); }
 function bioRegistered(){ return !!localStorage.getItem('dioneBioCredId'); }
