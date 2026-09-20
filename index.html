@@ -139,7 +139,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
     <input type="password" id="lockInput" inputmode="numeric" maxlength="12" placeholder="••••">
     <button class="btn block" onclick="tryUnlock()" style="background:var(--teal)">Entrar</button>
     <button class="btn block outline" id="bioBtn" style="display:none;margin-top:10px" onclick="unlockWithBiometric()">👆 Entrar com digital</button>
-    <div class="lockHint" id="lockHint" onclick="forgotPw()">Esqueci a senha (redefinir localmente)</div>
+    <div class="lockHint" id="lockHint" onclick="forgotPw()">Esqueci a senha (apaga os dados salvos)</div>
   </div>
 </div>
 
@@ -162,6 +162,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
 <button class="drawerAction" onclick="startVoiceQuery()">🎤 Falar com a Didi</button>
 <button class="drawerAction" onclick="exportBackup()">⬇️ Exportar backup</button>
 <button class="drawerAction" onclick="exportCSV()">📊 Exportar CSV (Excel)</button>
+<button class="drawerAction" onclick="openConfiguracoes()">⚙️ Configurações</button>
       <button class="drawerAction" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button>
       <button class="drawerAction" onclick="resetAllData()" style="color:#ffb3a7">🗑️ Apagar todos os dados</button>
       <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
@@ -208,14 +209,39 @@ const DEFAULT_STATE = () => ({
   categoryBudgets: {},
 });
 
-let state = load();
-if(state.pendingSalaryDeduction===undefined) state.pendingSalaryDeduction = 0;
-if(!state.categoryBudgets) state.categoryBudgets = {};
-function load(){
-  try{ const raw = localStorage.getItem("dioneData2"); if(raw) return JSON.parse(raw); }catch(e){}
-  return DEFAULT_STATE();
+let state = DEFAULT_STATE();
+let sessionKey = null;
+function save(){
+  if(!sessionKey) return;
+  encryptAndPersist();
 }
-function save(){ localStorage.setItem("dioneData2", JSON.stringify(state)); }
+async function encryptAndPersist(){
+  try{
+    const payload = await encryptJSON(sessionKey, state);
+    localStorage.setItem('dioneDataEnc', JSON.stringify(payload));
+  }catch(e){ console.error('Falha ao salvar (criptografia)', e); }
+}
+async function deriveKeyFromPassword(password, saltB64){
+  const salt = saltB64 ? b64ToBuf(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'},
+    keyMaterial, {name:'AES-GCM', length:256}, true, ['encrypt','decrypt']
+  );
+  return { key, saltB64: bufToB64(salt) };
+}
+async function encryptJSON(key, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder().encode(JSON.stringify(obj));
+  const cipher = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc);
+  return { iv: bufToB64(iv), data: bufToB64(cipher) };
+}
+async function decryptJSON(key, payload){
+  const iv = b64ToBuf(payload.iv);
+  const data = b64ToBuf(payload.data);
+  const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, data);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
 function uid(p){ return (p||"id")+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function fmt(n){ n = Number(n)||0; return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function localDateStr(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
@@ -285,10 +311,12 @@ async function toggleBiometric(){
   if(!bioSupported()){ toast("Este navegador/aparelho não suporta digital"); return; }
   if(bioRegistered()){
     localStorage.removeItem('dioneBioCredId');
+    localStorage.removeItem('dioneBioKeyRaw');
     toast("Entrada por digital desativada");
     refreshBioUI(); toggleDrawer(false);
     return;
   }
+  if(!sessionKey){ toast("Entre com a senha antes de ativar a digital"); return; }
   try{
     const cred = await navigator.credentials.create({ publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
@@ -299,6 +327,8 @@ async function toggleBiometric(){
       timeout: 60000, attestation: "none"
     }});
     localStorage.setItem('dioneBioCredId', bufToB64(cred.rawId));
+    const rawKey = await crypto.subtle.exportKey('raw', sessionKey);
+    localStorage.setItem('dioneBioKeyRaw', bufToB64(rawKey));
     toast("Digital ativada! Use-a na próxima vez que entrar.");
   }catch(e){ toast("Não foi possível ativar a digital"); }
   refreshBioUI(); toggleDrawer(false);
@@ -330,6 +360,20 @@ async function unlockWithBiometric(retryCount){
       userVerification: 'preferred', timeout: 60000
     }});
     clearTimeout(timeoutGuard);
+    const rawKeyB64 = localStorage.getItem('dioneBioKeyRaw');
+    if(!rawKeyB64) throw new Error('sem chave salva');
+    const rawKey = b64ToBuf(rawKeyB64);
+    const key = await crypto.subtle.importKey('raw', rawKey, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
+    const payload = JSON.parse(localStorage.getItem('dioneDataEnc'));
+    state = await decryptJSON(key, payload);
+    sessionKey = key;
+    if(state.pendingSalaryDeduction===undefined) state.pendingSalaryDeduction = 0;
+    if(!state.categoryBudgets) state.categoryBudgets = {};
+    if(!state.undoSnapshots) state.undoSnapshots = [];
+    if(!state.customCategoriesOut) state.customCategoriesOut = [];
+    if(!state.customCategoriesIn) state.customCategoriesIn = [];
+    if(!state.nameAliases) state.nameAliases = {};
+    if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); handleQuickAction();
@@ -455,9 +499,44 @@ function checkFechamentoReminder(){
 }
 
 /* ================= LOCK ================= */
-function tryUnlock(){
+async function tryUnlock(){
   const val = document.getElementById('lockInput').value;
-  if(val === state.password){
+  const errEl = document.getElementById('lockErr');
+  errEl.textContent = '';
+  try{
+    if(localStorage.getItem('dioneDataEnc')){
+      const saltB64 = localStorage.getItem('dioneSalt');
+      const { key } = await deriveKeyFromPassword(val, saltB64);
+      const payload = JSON.parse(localStorage.getItem('dioneDataEnc'));
+      const loaded = await decryptJSON(key, payload);
+      state = loaded;
+      sessionKey = key;
+    } else if(localStorage.getItem('dioneData2')){
+      const raw = JSON.parse(localStorage.getItem('dioneData2'));
+      if(val !== raw.password) throw new Error('senha errada');
+      state = raw;
+      delete state.password;
+      const { key, saltB64 } = await deriveKeyFromPassword(val, null);
+      localStorage.setItem('dioneSalt', saltB64);
+      sessionKey = key;
+      await encryptAndPersist();
+      localStorage.removeItem('dioneData2');
+    } else {
+      if(val !== '1234') throw new Error('senha errada');
+      state = DEFAULT_STATE();
+      delete state.password;
+      const { key, saltB64 } = await deriveKeyFromPassword(val, null);
+      localStorage.setItem('dioneSalt', saltB64);
+      sessionKey = key;
+      await encryptAndPersist();
+    }
+    if(state.pendingSalaryDeduction===undefined) state.pendingSalaryDeduction = 0;
+    if(!state.categoryBudgets) state.categoryBudgets = {};
+    if(!state.undoSnapshots) state.undoSnapshots = [];
+    if(!state.customCategoriesOut) state.customCategoriesOut = [];
+    if(!state.customCategoriesIn) state.customCategoriesIn = [];
+    if(!state.nameAliases) state.nameAliases = {};
+    if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     runAuto();
@@ -468,8 +547,8 @@ function tryUnlock(){
     checkFechamentoReminder();
     checkResumoDiario();
     handleQuickAction();
-  } else {
-    document.getElementById('lockErr').textContent = "Senha incorreta";
+  } catch(e){
+    errEl.textContent = "Senha incorreta";
   }
 }
 function lockApp(){
@@ -477,10 +556,28 @@ function lockApp(){
   document.getElementById('lockErr').textContent='';
   document.getElementById('app').style.display='none';
   document.getElementById('lockScreen').style.display='flex';
+  sessionKey = null;
+  state = DEFAULT_STATE();
 }
 function forgotPw(){
-  const np = prompt("Redefinir localmente. Digite a nova senha:");
-  if(np){ state.password = np; save(); toast("Senha redefinida"); }
+  const conf = confirm("ATENÇÃO: como os dados agora são criptografados com a senha, esquecer a senha significa que os dados salvos neste aparelho não podem ser recuperados. Isso vai APAGAR tudo e começar do zero. Deseja continuar?");
+  if(!conf) return;
+  const np = prompt("Digite a nova senha para começar do zero:");
+  if(!np) return;
+  localStorage.removeItem('dioneDataEnc');
+  localStorage.removeItem('dioneData2');
+  localStorage.removeItem('dioneSalt');
+  localStorage.removeItem('dioneBioKeyRaw');
+  localStorage.removeItem('dioneBioCredId');
+  (async ()=>{
+    state = DEFAULT_STATE();
+    delete state.password;
+    const { key, saltB64 } = await deriveKeyFromPassword(np, null);
+    localStorage.setItem('dioneSalt', saltB64);
+    sessionKey = key;
+    await encryptAndPersist();
+    toast("Dados apagados. Nova senha definida.");
+  })();
 }
 document.getElementById('lockInput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
 
@@ -874,7 +971,7 @@ function renderLancamentos(){
   </div>`;
 }
 function openLancForm(id, presetCardId, presetDate){
-  const it = id? state.lancamentos.find(l=>l.id===id) : {desc:'',category:CATS_OUT[0],amount:'',date:presetDate||todayStr(),status:'previsto',type:'saida',installments:1,cardId:presetCardId||'',receipt:null};
+  const it = id? state.lancamentos.find(l=>l.id===id) : {desc:'',category:state.categoriesOut[0],amount:'',date:presetDate||todayStr(),status:'previsto',type:'saida',installments:1,cardId:presetCardId||'',receipt:null};
   const cats = it.type==='entrada' ? state.categoriesIn : state.categoriesOut;
   openSheet(`${id?'Editar':'Novo'} lançamento`, `
     <button type="button" class="btn block outline" id="voiceBtn" onclick="startVoiceLanc()" style="margin-bottom:6px">🎤 Preencher por voz</button>
@@ -962,7 +1059,7 @@ function handleWhatsAppPrevistoRequest(text){
   const mentionsGeral = /geral|gerais|todos os meses|tudo previsto/.test(text);
   const monthFromSpeech = extractMonthFromText(text);
   const person = extractPersonFromText(text);
-  const categoria = extractCategoryFromText(text, CATS_OUT);
+  const categoria = extractCategoryFromText(text, state.categoriesOut);
   const freeTerm = (!categoria && !person) ? extractFreeSearchTerm(text) : null;
   let items = activeLanc().filter(l=>l.type==='saida' && !l.applied);
   if(categoria) items = items.filter(l=>l.category===categoria);
@@ -1037,7 +1134,7 @@ function answerVoiceQuery(text){
   else if(text.includes('receber') || text.includes('recebimento') || text.includes('entrad') || text.includes('receb')) type='entrada';
   if(!type){ toast('A Didi não entendeu se é sobre entradas, saídas ou saldo. Tente: "Didi, saídas do mês" ou "Didi, quanto eu tenho".'); return; }
   const wantsPrevisto = /previs|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
-  const catList = type==='saida' ? CATS_OUT : CATS_IN;
+  const catList = type==='saida' ? state.categoriesOut : state.categoriesIn;
   const categoria = extractCategoryFromText(text, catList);
   const person = extractPersonFromText(text);
   const freeTerm = (!categoria && !person) ? extractFreeSearchTerm(text) : null;
@@ -1135,7 +1232,8 @@ function normalizeText(s){ return (s||'').toLowerCase().normalize('NFD').replace
 const NAME_ALIASES = { 'alessandra':'alessandra', 'ale':'alessandra', 'ali':'alessandra', 'alê':'alessandra', 'dione':'dione' };
 function extractPersonFromText(text){
   const norm = normalizeText(text);
-  for(const [spoken, term] of Object.entries(NAME_ALIASES)){
+  const allAliases = { ...NAME_ALIASES, ...(state.nameAliases||{}) };
+  for(const [spoken, term] of Object.entries(allAliases)){
     if(new RegExp(`\\b${spoken}\\b`).test(norm)) return term;
   }
   return null;
@@ -1849,7 +1947,7 @@ function buildFechamentoEmailText(m, totalEntrou, totalSaiu, entradasCategoria, 
 function enviarFechamentoPorEmail(){
   if(!window._lastFechamentoEmail){ toast('Gere o fechamento primeiro'); return; }
   const {subject, body} = window._lastFechamentoEmail;
-  window.location.href = `mailto:dssantosbarboza@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = `mailto:${state.settings?.fechamentoEmail||'dssantosbarboza@gmail.com'}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 function enviarFechamentoPorWhatsApp(){
   if(!window._lastFechamentoEmail){ toast('Gere o fechamento primeiro'); return; }
@@ -1951,7 +2049,12 @@ function importBackup(event){
     const ok = confirm("Importar este backup vai SUBSTITUIR todos os dados atuais do app. Deseja continuar?");
     if(!ok){ event.target.value=""; return; }
     state = parsed;
+    delete state.password;
     if(!state.undoSnapshots) state.undoSnapshots = [];
+    if(!state.customCategoriesOut) state.customCategoriesOut = [];
+    if(!state.customCategoriesIn) state.customCategoriesIn = [];
+    if(!state.nameAliases) state.nameAliases = {};
+    if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     save();
     toggleDrawer(false);
     render();
@@ -1970,6 +2073,87 @@ function resetAllData(){
   toggleDrawer(false);
   render();
   toast("Todos os dados foram apagados");
+}
+
+/* ================= CONFIGURAÇÕES ================= */
+function openConfiguracoes(){
+  toggleDrawer(false);
+  renderConfiguracoesBody();
+}
+function renderConfiguracoesBody(){
+  const email = state.settings?.fechamentoEmail || '';
+  const aliasEntries = Object.entries(state.nameAliases||{});
+  const catsOutHtml = state.categoriesOut.map((c,i)=>`<div class="row"><span>${c}</span><button style="background:none;border:none;color:var(--red);font-size:16px;padding:2px 8px;cursor:pointer" onclick="removeCategoria('saida',${i})">✕</button></div>`).join('');
+  const catsInHtml = state.categoriesIn.map((c,i)=>`<div class="row"><span>${c}</span><button style="background:none;border:none;color:var(--red);font-size:16px;padding:2px 8px;cursor:pointer" onclick="removeCategoria('entrada',${i})">✕</button></div>`).join('');
+  const aliasHtml = aliasEntries.length ? aliasEntries.map(([spoken,term],i)=>`<div class="row"><span>"${spoken}" → ${term}</span><button style="background:none;border:none;color:var(--red);font-size:16px;padding:2px 8px;cursor:pointer" onclick="removeNameAlias(${i})">✕</button></div>`).join('') : '<div class="muted">Nenhum nome extra cadastrado</div>';
+  openSheet('Configurações', `
+    <h3 style="margin-top:0">E-mail do fechamento mensal</h3>
+    <label class="f">Enviar fechamento para</label>
+    <input class="f" id="cfg_email" value="${email}" placeholder="seuemail@exemplo.com">
+    <button class="btn block" style="margin-top:8px" onclick="saveConfigEmail()">Salvar e-mail</button>
+
+    <hr class="sep">
+    <h3>Categorias de saída</h3>
+    ${catsOutHtml}
+    <div class="row" style="margin-top:8px"><input class="f" id="cfg_new_cat_out" placeholder="Nova categoria de saída"><button class="btn" onclick="addCategoria('saida')">Adicionar</button></div>
+
+    <hr class="sep">
+    <h3>Categorias de entrada</h3>
+    ${catsInHtml}
+    <div class="row" style="margin-top:8px"><input class="f" id="cfg_new_cat_in" placeholder="Nova categoria de entrada"><button class="btn" onclick="addCategoria('entrada')">Adicionar</button></div>
+
+    <hr class="sep">
+    <h3>Nomes reconhecidos pela Didi</h3>
+    <div class="muted" style="margin-bottom:8px">Ex: quando você fala "Ale" ou "Alessandra", a Didi procura por "Alessandra" nas descrições. Já vêm cadastrados: Alessandra/Ale/Ali/Alê e Dione.</div>
+    ${aliasHtml}
+    <div class="row" style="margin-top:8px"><input class="f" id="cfg_alias_spoken" placeholder="Palavra falada (ex: Marcos)"><input class="f" id="cfg_alias_term" placeholder="Buscar como (ex: marcos)"></div>
+    <button class="btn block" style="margin-top:8px" onclick="addNameAlias()">Adicionar nome</button>
+  `);
+}
+function saveConfigEmail(){
+  const val = document.getElementById('cfg_email').value.trim();
+  if(!val){ toast('Digite um e-mail válido'); return; }
+  if(!state.settings) state.settings = {};
+  state.settings.fechamentoEmail = val;
+  save();
+  toast('E-mail salvo');
+  renderConfiguracoesBody();
+}
+function addCategoria(type){
+  const inputId = type==='saida' ? 'cfg_new_cat_out' : 'cfg_new_cat_in';
+  const val = document.getElementById(inputId).value.trim();
+  if(!val) return;
+  const arr = type==='saida' ? state.categoriesOut : state.categoriesIn;
+  if(arr.includes(val)){ toast('Essa categoria já existe'); return; }
+  arr.push(val);
+  save();
+  renderConfiguracoesBody();
+}
+function removeCategoria(type, idx){
+  const arr = type==='saida' ? state.categoriesOut : state.categoriesIn;
+  const cat = arr[idx];
+  const emUso = state.lancamentos.some(l=>l.category===cat && !l.trashed);
+  if(emUso && !confirm(`A categoria "${cat}" já foi usada em lançamentos. Remover só tira da lista de opções novas — os lançamentos antigos continuam com essa categoria. Continuar?`)) return;
+  arr.splice(idx,1);
+  save();
+  renderConfiguracoesBody();
+}
+function addNameAlias(){
+  const spoken = document.getElementById('cfg_alias_spoken').value.trim().toLowerCase();
+  const term = document.getElementById('cfg_alias_term').value.trim().toLowerCase();
+  if(!spoken || !term){ toast('Preencha os dois campos'); return; }
+  if(!state.nameAliases) state.nameAliases = {};
+  state.nameAliases[spoken] = term;
+  save();
+  toast('Nome adicionado');
+  renderConfiguracoesBody();
+}
+function removeNameAlias(idx){
+  const entries = Object.entries(state.nameAliases||{});
+  const [spoken] = entries[idx];
+  delete state.nameAliases[spoken];
+  save();
+  renderConfiguracoesBody();
 }
 
 /* ================= SHEET (FORM MODAL) ================= */
