@@ -1135,7 +1135,7 @@ function enviarPrevistoWhatsApp(){
 }
 function answerVoiceQuery(text){
   const hasEnviarWord = /enviar|mandar|compartilh/.test(text);
-  const hasDespesaWord = /despes|gasto|previst/.test(text);
+  const hasDespesaWord = /despes|gasto|previs|pagamento|recebimento/.test(text);
   const wantsWhatsShare = hasEnviarWord && hasDespesaWord;
   if(wantsWhatsShare){ handleWhatsAppPrevistoRequest(text); return; }
   if(/apag|exclu|remov|delet/.test(text) && /ultim/.test(text)){
@@ -1164,14 +1164,15 @@ function answerVoiceQuery(text){
     return;
   }
   const monthFromSpeech = extractMonthFromText(text);
-  const mentionsGeral = /geral|gerais|todos os meses|tudo previsto|tudo mesmo/.test(text);
+  let mentionsGeral = /geral|gerais|todos os meses|tudo previsto|tudo mesmo/.test(text);
+  const wantsPrevisto = /previs|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
+  if(wantsPrevisto && !monthFromSpeech) mentionsGeral = true;
   const ym = monthFromSpeech || todayStr().slice(0,7);
   const mesLabel = (!monthFromSpeech && mentionsGeral) ? 'todos os períodos' : formatMonthLabel(ym);
   let type = null;
   if(text.includes('pagar') || text.includes('pagamento') || text.includes('saíd') || text.includes('said') || text.includes('gasto') || text.includes('despes')) type='saida';
   else if(text.includes('receber') || text.includes('recebimento') || text.includes('entrad') || text.includes('receb')) type='entrada';
   if(!type){ toast('A Didi não entendeu se é sobre entradas, saídas ou saldo. Tente: "Didi, saídas do mês" ou "Didi, quanto eu tenho".'); return; }
-  const wantsPrevisto = /previs|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
   const catList = type==='saida' ? state.categoriesOut : state.categoriesIn;
   const categoria = extractCategoryFromText(text, catList);
   const person = extractPersonFromText(text);
