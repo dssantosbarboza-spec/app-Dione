@@ -1091,6 +1091,7 @@ function openLancForm(id, presetCardId, presetDate){
     </div>
     <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*" capture="environment" onchange="lerValorComprovante()">
     <div class="muted" id="ocr_status" style="display:none;margin-top:4px"></div>
+    <button type="button" class="btn block outline" style="margin-top:8px" onclick="lerCodigoBarrasBoleto()">📊 É um boleto? Ler código de barras</button>
     ${it.receipt?'<div class="muted">Já existe um comprovante anexado.</div>':''}
     <div class="muted" style="margin-top:6px">ℹ️ "Realizado" abate/credita na hora. "Previsto" só aplica quando a data chegar, ou toque em "Aplicar agora" na lista pra antecipar. Compras em cartão com fechamento configurado calculam a data de vencimento automaticamente.</div>
     <div style="display:flex;gap:10px;margin-top:16px">
@@ -1362,6 +1363,46 @@ function guessCategoryByKeyword(desc, cats){
     if(cats.includes(cat) && words.some(w=>lower.includes(w))) return cat;
   }
   return null;
+}
+async function lerCodigoBarrasBoleto(){
+  const fileInput = document.getElementById('f_receipt');
+  const statusEl = document.getElementById('ocr_status');
+  const file = fileInput.files[0];
+  if(!file){ toast('Escolha a foto do boleto no campo de comprovante primeiro'); return; }
+  statusEl.style.display = 'block';
+  if(!('BarcodeDetector' in window)){
+    statusEl.textContent = '⚠️ Este navegador não suporta leitura de código de barras. Digite o valor manualmente ou tente pela leitura de texto normal.';
+    return;
+  }
+  statusEl.textContent = '📷 Procurando o código de barras...';
+  try{
+    const bitmap = await createImageBitmap(file);
+    const detector = new BarcodeDetector({formats:['itf']});
+    const codes = await detector.detect(bitmap);
+    if(!codes.length){
+      statusEl.textContent = '⚠️ Não encontrei o código de barras na foto. Tente enquadrar melhor, com boa luz e sem inclinar.';
+      return;
+    }
+    const raw = codes[0].rawValue.replace(/\D/g,'');
+    if(raw.length !== 44){
+      statusEl.textContent = '⚠️ Código lido, mas não parece o código de barras de um boleto (deveria ter 44 números).';
+      return;
+    }
+    const fatorVenc = parseInt(raw.slice(5,9),10);
+    const valor = parseInt(raw.slice(9,19),10)/100;
+    const amountEl = document.getElementById('f_amount');
+    if(amountEl) amountEl.value = valor.toFixed(2);
+    let vencTexto = '';
+    if(fatorVenc>0 && fatorVenc<99999){
+      const vencDate = new Date(Date.UTC(1997,9,7) + fatorVenc*86400000);
+      const dateEl = document.getElementById('f_date');
+      if(dateEl) dateEl.value = vencDate.toISOString().slice(0,10);
+      vencTexto = `, vencimento ${vencDate.toLocaleDateString('pt-BR', {timeZone:'UTC'})}`;
+    }
+    statusEl.textContent = `✅ Boleto lido! Valor: ${fmt(valor)}${vencTexto} — confira antes de salvar!`;
+  }catch(e){
+    statusEl.textContent = '⚠️ Não consegui ler o código de barras dessa imagem. Tente outra foto, bem focada no código.';
+  }
 }
 /* ================= OCR DO COMPROVANTE (sob demanda) ================= */
 let _tesseractLoading = null;
