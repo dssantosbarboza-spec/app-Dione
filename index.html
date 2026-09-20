@@ -1100,9 +1100,13 @@ function handleWhatsAppPrevistoRequest(text){
   const mentionsGeral = /geral|gerais|todos os meses|tudo previsto/.test(text);
   const monthFromSpeech = extractMonthFromText(text);
   const person = extractPersonFromText(text);
-  const categoria = extractCategoryFromText(text, state.categoriesOut);
+  const wantsPrevisto = /previs|a pagar|a receber|vou pagar|vou receber|tenho.*pagar|tenho.*receber/.test(text);
+  let type = 'saida';
+  if((text.includes('receber') || text.includes('recebimento') || text.includes('entrad')) && !text.includes('pagar') && !text.includes('pagamento') && !text.includes('despes')) type = 'entrada';
+  const catList = type==='saida' ? state.categoriesOut : state.categoriesIn;
+  const categoria = extractCategoryFromText(text, catList);
   const freeTerm = (!categoria && !person) ? extractFreeSearchTerm(text) : null;
-  let items = activeLanc().filter(l=>l.type==='saida' && !l.applied);
+  let items = activeLanc().filter(l=>l.type===type && (wantsPrevisto ? !l.applied : l.applied));
   if(categoria) items = items.filter(l=>l.category===categoria);
   if(person) items = items.filter(l=>(l.desc||'').toLowerCase().includes(person));
   if(freeTerm) items = items.filter(l=>normalizeText(l.desc||'').includes(freeTerm));
@@ -1122,15 +1126,18 @@ function handleWhatsAppPrevistoRequest(text){
   if(freeTerm) periodoLabel = `"${freeTerm}" — ${periodoLabel}`;
   items.sort((a,b)=>a.date.localeCompare(b.date));
   const total = items.reduce((s,l)=>s+Number(l.amount||0),0);
+  const tipoLabel = wantsPrevisto
+    ? (type==='saida' ? 'Despesas previstas' : 'Recebimentos previstos')
+    : (type==='saida' ? 'Saídas realizadas' : 'Entradas realizadas');
   const linhas = items.map(l=>`- ${l.desc||'(sem descrição)'} (${l.category}) — ${fmt(l.amount)} — ${l.date.split('-').reverse().join('/')}`).join('\n');
-  const texto = `*Despesas previstas — ${periodoLabel}*\n\n${linhas || '(nenhuma despesa prevista)'}\n\n*Total: ${fmt(total)}*`;
-  const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nenhuma despesa prevista</div>';
+  const texto = `*${tipoLabel} — ${periodoLabel}*\n\n${linhas || '(nada encontrado)'}\n\n*Total: ${fmt(total)}*`;
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   window._lastWhatsPrevisto = texto;
-  openSheet(`Despesas previstas — ${periodoLabel}`, `
+  openSheet(`${tipoLabel} — ${periodoLabel}`, `
     <div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}
     <button class="btn block outline" style="margin-top:14px" onclick="enviarPrevistoWhatsApp()">📤 Enviar por WhatsApp</button>
   `);
-  falarComoAle(`Didi: preparei a lista de despesas previstas, ${periodoLabel}. Total de ${fmt(total)}. Pode enviar por WhatsApp na tela.`);
+  falarComoAle(`Didi: preparei a lista de ${tipoLabel.toLowerCase()}, ${periodoLabel}. Total de ${fmt(total)}. Pode enviar por WhatsApp na tela.`);
 }
 function enviarPrevistoWhatsApp(){
   if(!window._lastWhatsPrevisto){ toast('Gere a lista primeiro'); return; }
