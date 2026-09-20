@@ -260,6 +260,7 @@ function loadDarkMode(){
   if(localStorage.getItem('dioneDark')==='1') document.body.classList.add('dark');
 }
 loadDarkMode();
+setInterval(applyAutoDarkMode, 5*60*1000);
 
 /* ================= LEMBRETE DE BACKUP ================= */
 function checkBackupReminder(){
