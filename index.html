@@ -2117,13 +2117,21 @@ function openImportarLote(){
   ta.addEventListener('blur', auto);
 }
 function parseLoteLancamentos(text){
-  const re = /^\s*-?\s*(.+?)\s*\(([^)]+)\)\s*—\s*R\$\s*([\d.,]+)\s*—\s*(\d{2})\/(\d{2})\/(\d{4})\s*$/;
   return text.split('\n').map(line=>{
-    const m = line.match(re);
-    if(!m) return null;
-    const [, desc, categoria, valorStr, dd, mm, yyyy] = m;
-    const amount = parseFloat(valorStr.replace(/\./g,'').replace(',','.'));
-    return { desc: desc.trim(), category: categoria.trim(), amount, date: `${yyyy}-${mm}-${dd}` };
+    const l = line.trim();
+    if(!l) return null;
+    const catMatch = l.match(/\(([^)]+)\)/);
+    const valorMatch = l.match(/R\$\s*([\d.,]+)/);
+    const dataMatch = l.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if(!catMatch || !valorMatch || !dataMatch) return null;
+    const categoria = catMatch[1].trim();
+    const amount = parseFloat(valorMatch[1].replace(/\./g,'').replace(',','.'));
+    let [, dd, mm, yyyyRaw] = dataMatch;
+    const yyyy = yyyyRaw.length===2 ? `20${yyyyRaw}` : yyyyRaw;
+    const date = `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+    let desc = l.slice(0, catMatch.index).replace(/^-+\s*/,'').trim();
+    if(!desc) desc = '(sem descrição)';
+    return { desc, category: categoria, amount, date };
   }).filter(Boolean);
 }
 function previewImportarLote(){
