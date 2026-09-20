@@ -155,8 +155,8 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
     <div class="drawerHead"><b>Menu</b></div>
     <div id="navList"></div>
     <div class="drawerFoot">
-      <button class="drawerAction" id="darkManualBtn" onclick="toggleDarkMode()">🌙 Alternar modo escuro</button>
-<button class="drawerAction" id="darkAutoBtn" onclick="toggleDarkAuto()">🌗 Modo escuro automático (à noite)</button>
+      <button class="drawerAction" onclick="toggleDarkMode()">🌙 Alternar modo escuro</button>
+<button class="drawerAction" onclick="toggleDarkAuto()">🌗 Modo escuro automático (à noite)</button>
 <button class="drawerAction" id="bioToggleBtn" onclick="toggleBiometric()">🔐 Ativar entrada por digital</button>
 <button class="drawerAction" id="notifToggleBtn" onclick="requestNotifPermission()">🔔 Ativar notificações de vencimento</button>
 <button class="drawerAction" onclick="startVoiceQuery()">🎤 Falar com a Didi</button>
@@ -263,14 +263,9 @@ function undoLast(){
 
 /* ================= MODO ESCURO ================= */
 function toggleDarkMode(){
-  if(localStorage.getItem('dioneDarkAuto')==='1'){
-    const ok = confirm('O modo escuro automático está ativado. Usar o botão manual vai DESLIGAR o automático. Continuar?');
-    if(!ok){ toggleDrawer(false); return; }
-    localStorage.setItem('dioneDarkAuto','0');
-  }
   document.body.classList.toggle('dark');
   localStorage.setItem('dioneDark', document.body.classList.contains('dark')?'1':'0');
-  updateDarkModeButtons();
+  localStorage.setItem('dioneDarkAuto','0');
   toggleDrawer(false);
 }
 function toggleDarkAuto(){
@@ -278,15 +273,7 @@ function toggleDarkAuto(){
   localStorage.setItem('dioneDarkAuto', isAuto ? '0' : '1');
   applyAutoDarkMode();
   toast(isAuto ? 'Modo escuro automático desativado' : 'Modo escuro automático ativado (18h às 6h)');
-  updateDarkModeButtons();
   toggleDrawer(false);
-}
-function updateDarkModeButtons(){
-  const isAuto = localStorage.getItem('dioneDarkAuto')==='1';
-  const autoBtn = document.getElementById('darkAutoBtn');
-  const manualBtn = document.getElementById('darkManualBtn');
-  if(autoBtn) autoBtn.textContent = `🌗 Modo escuro automático (à noite) — ${isAuto ? 'Ativado ✅' : 'Desativado'}`;
-  if(manualBtn) manualBtn.textContent = `🌙 Alternar modo escuro${isAuto ? ' (desligado, pois automático está ativo)' : ''}`;
 }
 function applyAutoDarkMode(){
   if(localStorage.getItem('dioneDarkAuto')!=='1') return;
@@ -300,8 +287,6 @@ function loadDarkMode(){
 }
 loadDarkMode();
 setInterval(applyAutoDarkMode, 5*60*1000);
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') applyAutoDarkMode(); });
-window.addEventListener('focus', applyAutoDarkMode);
 
 /* ================= LEMBRETE DE BACKUP ================= */
 function checkBackupReminder(){
@@ -391,7 +376,6 @@ async function unlockWithBiometric(retryCount){
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
-    applyAutoDarkMode();
     runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); handleQuickAction();
   }catch(e){
     clearTimeout(timeoutGuard);
@@ -555,7 +539,6 @@ async function tryUnlock(){
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
-    applyAutoDarkMode();
     runAuto();
     render();
     checkBackupReminder();
@@ -620,7 +603,6 @@ function buildNav(){
 function toggleDrawer(open){
   document.getElementById('drawer').classList.toggle('open', open);
   document.getElementById('drawerOverlay').classList.toggle('show', open);
-  if(open) updateDarkModeButtons();
 }
 function goTab(id){ currentTab=id; toggleDrawer(false); render(); }
 
