@@ -317,10 +317,13 @@ window.addEventListener('focus', applyAutoDarkMode);
 
 /* ================= LEMBRETE DE BACKUP ================= */
 function checkBackupReminder(){
+  const today = todayStr();
   const last = localStorage.getItem('dioneLastBackup');
-  if(!last) return;
-  const diffDays = Math.floor((new Date(todayStr()) - new Date(last))/86400000);
-  if(diffDays>=7) setTimeout(()=>toast(`💡 Já fazem ${diffDays} dias desde o último backup. Considere exportar.`), 600);
+  if(last){
+    const diffDays = Math.floor((new Date(today) - new Date(last))/86400000);
+    if(diffDays<7) return;
+  }
+  setTimeout(()=>exportBackup(true), 1200);
 }
 
 /* ================= BIOMETRIA (digital / Face ID local) ================= */
@@ -2063,7 +2066,7 @@ function exportCSV(){
   URL.revokeObjectURL(url);
   toggleDrawer(false);
 }
-function exportBackup(){
+function exportBackup(auto){
   const data = JSON.stringify(state, null, 2);
   const blob = new Blob([data], {type:"application/json"});
   const url = URL.createObjectURL(blob);
@@ -2073,8 +2076,12 @@ function exportBackup(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   localStorage.setItem('dioneLastBackup', todayStr());
-  toggleDrawer(false);
-  toast("Backup exportado");
+  if(auto){
+    toast("📦 Backup automático do dia salvo em Downloads");
+  } else {
+    toggleDrawer(false);
+    toast("Backup exportado");
+  }
 }
 function importBackup(event){
   const file = event.target.files[0];
