@@ -2066,8 +2066,8 @@ function importBackup(event){
 function resetAllData(){
   const ok1 = confirm("Isso vai APAGAR TUDO: saldo, lançamentos, cartões, empréstimo, dívidas e caixinhas. Não tem como desfazer. Deseja continuar?");
   if(!ok1) return;
-  const ok2 = confirm("Tem certeza mesmo? Essa é sua última chance de cancelar.");
-  if(!ok2) return;
+  const digitado = prompt('Para confirmar de verdade, digite a palavra APAGAR (tudo em maiúsculo):');
+  if(digitado !== 'APAGAR'){ toast('Cancelado — nada foi apagado'); return; }
   state = DEFAULT_STATE();
   save();
   toggleDrawer(false);
