@@ -139,7 +139,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
     <input type="password" id="lockInput" inputmode="numeric" maxlength="12" placeholder="••••">
     <button class="btn block" onclick="tryUnlock()" style="background:var(--teal)">Entrar</button>
     <button class="btn block outline" id="bioBtn" style="display:none;margin-top:10px" onclick="unlockWithBiometric()">👆 Entrar com digital</button>
-    <div class="lockHint" id="lockHint" onclick="forgotPw()">Esqueci a senha (apaga os dados salvos)</div>
+    
   </div>
 </div>
 
@@ -213,14 +213,25 @@ const DEFAULT_STATE = () => ({
 let state = DEFAULT_STATE();
 let sessionKey = null;
 function save(){
-  if(!sessionKey) return;
+  if(!sessionKey){
+    alert("⚠️ ERRO GRAVE: não foi possível salvar suas informações agora (sessão inválida). NÃO fecha o app — tira um print desta tela e me avisa. Tente recarregar a página antes de continuar lançando algo.");
+    return;
+  }
   encryptAndPersist();
 }
 async function encryptAndPersist(){
   try{
     const payload = await encryptJSON(sessionKey, state);
-    localStorage.setItem('dioneDataEnc', JSON.stringify(payload));
-  }catch(e){ console.error('Falha ao salvar (criptografia)', e); }
+    const json = JSON.stringify(payload);
+    localStorage.setItem('dioneDataEnc', json);
+    const check = localStorage.getItem('dioneDataEnc');
+    if(check !== json){
+      alert("⚠️ ERRO GRAVE ao salvar: os dados podem não ter sido gravados corretamente. Tire um print e me avise antes de continuar.");
+    }
+  }catch(e){
+    console.error('Falha ao salvar (criptografia)', e);
+    alert("⚠️ ERRO GRAVE ao salvar seus dados: " + (e && e.message ? e.message : 'erro desconhecido') + ". Tire um print desta mensagem e me avise antes de continuar usando o app.");
+  }
 }
 async function deriveKeyFromPassword(password, saltB64){
   const salt = saltB64 ? b64ToBuf(saltB64) : crypto.getRandomValues(new Uint8Array(16));
@@ -2060,7 +2071,7 @@ function importBackup(event){
   const file = event.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = ()=>{
+  reader.onload = async ()=>{
     let parsed;
     try{ parsed = JSON.parse(reader.result); }
     catch(e){ toast("Arquivo inválido"); return; }
@@ -2074,10 +2085,22 @@ function importBackup(event){
     if(!state.customCategoriesIn) state.customCategoriesIn = [];
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
-    save();
-    toggleDrawer(false);
-    render();
-    toast("Backup importado com sucesso");
+    if(!sessionKey){
+      alert("⚠️ ERRO: sessão inválida, não foi possível salvar o backup importado. Recarregue o app e tente de novo.");
+      return;
+    }
+    try{
+      const payload = await encryptJSON(sessionKey, state);
+      const json = JSON.stringify(payload);
+      localStorage.setItem('dioneDataEnc', json);
+      const verify = await decryptJSON(sessionKey, JSON.parse(localStorage.getItem('dioneDataEnc')));
+      if(verify.saldo !== state.saldo) throw new Error('verificação de saldo não bateu');
+      toggleDrawer(false);
+      render();
+      toast(`Backup importado e confirmado! Saldo: ${fmt(verify.saldo)}`);
+    }catch(e){
+      alert("⚠️ ERRO ao confirmar o backup salvo: " + (e && e.message ? e.message : 'erro desconhecido') + ". Tire um print e me avise — NÃO fecha o app ainda.");
+    }
     event.target.value = "";
   };
   reader.readAsText(file);
