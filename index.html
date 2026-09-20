@@ -2173,7 +2173,19 @@ function renderConfiguracoesBody(){
   const catsInHtml = state.categoriesIn.map((c,i)=>`<div class="row"><span>${c}</span><button style="background:none;border:none;color:var(--red);font-size:16px;padding:2px 8px;cursor:pointer" onclick="removeCategoria('entrada',${i})">✕</button></div>`).join('');
   const aliasHtml = aliasEntries.length ? aliasEntries.map(([spoken,term],i)=>`<div class="row"><span>"${spoken}" → ${term}</span><button style="background:none;border:none;color:var(--red);font-size:16px;padding:2px 8px;cursor:pointer" onclick="removeNameAlias(${i})">✕</button></div>`).join('') : '<div class="muted">Nenhum nome extra cadastrado</div>';
   openSheet('Configurações', `
-    <h3 style="margin-top:0">E-mail do fechamento mensal</h3>
+    <h3 style="margin-top:0">Trocar senha</h3>
+    <div class="muted" style="margin-bottom:8px">Troca a senha sem apagar nada (diferente do "Esqueci a senha" da tela de entrada).</div>
+    <label class="f">Senha atual</label>
+    <input class="f" id="cfg_pw_current" type="password" inputmode="numeric" maxlength="12">
+    <label class="f">Nova senha</label>
+    <input class="f" id="cfg_pw_new" type="password" inputmode="numeric" maxlength="12">
+    <label class="f">Confirmar nova senha</label>
+    <input class="f" id="cfg_pw_confirm" type="password" inputmode="numeric" maxlength="12">
+    <div class="muted" id="cfg_pw_msg" style="margin-top:6px"></div>
+    <button class="btn block" style="margin-top:8px" onclick="changePassword()">Trocar senha</button>
+
+    <hr class="sep">
+    <h3>E-mail do fechamento mensal</h3>
     <label class="f">Enviar fechamento para</label>
     <input class="f" id="cfg_email" value="${email}" placeholder="seuemail@exemplo.com">
     <button class="btn block" style="margin-top:8px" onclick="saveConfigEmail()">Salvar e-mail</button>
@@ -2195,6 +2207,40 @@ function renderConfiguracoesBody(){
     <div class="row" style="margin-top:8px"><input class="f" id="cfg_alias_spoken" placeholder="Palavra falada (ex: Marcos)"><input class="f" id="cfg_alias_term" placeholder="Buscar como (ex: marcos)"></div>
     <button class="btn block" style="margin-top:8px" onclick="addNameAlias()">Adicionar nome</button>
   `);
+}
+async function changePassword(){
+  const msgEl = document.getElementById('cfg_pw_msg');
+  const current = document.getElementById('cfg_pw_current').value;
+  const nova = document.getElementById('cfg_pw_new').value;
+  const confirma = document.getElementById('cfg_pw_confirm').value;
+  msgEl.style.color = 'var(--red)';
+  if(!current || !nova){ msgEl.textContent = 'Preencha a senha atual e a nova senha.'; return; }
+  if(nova !== confirma){ msgEl.textContent = 'A confirmação não bate com a nova senha.'; return; }
+  if(nova.length<4){ msgEl.textContent = 'A nova senha precisa ter pelo menos 4 caracteres.'; return; }
+  try{
+    const saltAtual = localStorage.getItem('dioneSalt');
+    const { key: keyAtual } = await deriveKeyFromPassword(current, saltAtual);
+    const rawAtual = bufToB64(await crypto.subtle.exportKey('raw', keyAtual));
+    const rawSessao = bufToB64(await crypto.subtle.exportKey('raw', sessionKey));
+    if(rawAtual !== rawSessao){ msgEl.textContent = 'Senha atual incorreta.'; return; }
+    const { key: novaKey, saltB64: novoSalt } = await deriveKeyFromPassword(nova, null);
+    const payload = await encryptJSON(novaKey, state);
+    localStorage.setItem('dioneDataEnc', JSON.stringify(payload));
+    localStorage.setItem('dioneSalt', novoSalt);
+    sessionKey = novaKey;
+    if(bioRegistered()){
+      const rawNova = await crypto.subtle.exportKey('raw', novaKey);
+      localStorage.setItem('dioneBioKeyRaw', bufToB64(rawNova));
+    }
+    msgEl.style.color = 'var(--green)';
+    msgEl.textContent = 'Senha trocada com sucesso!';
+    document.getElementById('cfg_pw_current').value='';
+    document.getElementById('cfg_pw_new').value='';
+    document.getElementById('cfg_pw_confirm').value='';
+    toast('Senha trocada com sucesso');
+  }catch(e){
+    msgEl.textContent = 'Não foi possível trocar a senha. Tente de novo.';
+  }
 }
 function saveConfigEmail(){
   const val = document.getElementById('cfg_email').value.trim();
