@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>App Pessoal Dione</title>
@@ -161,9 +162,11 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
 <button class="drawerAction" id="notifToggleBtn" onclick="requestNotifPermission()">🔔 Ativar notificações de vencimento</button>
 <button class="drawerAction" onclick="startVoiceQuery()">🎤 Falar com a Didi</button>
 <button class="drawerAction" onclick="exportBackup()">⬇️ Exportar backup</button>
+<button class="drawerAction" onclick="compartilharBackup()">☁️ Compartilhar backup (Drive, etc)</button>
 <button class="drawerAction" onclick="exportCSV()">📊 Exportar CSV (Excel)</button>
 <button class="drawerAction" onclick="openConfiguracoes()">⚙️ Configurações</button>
 <button class="drawerAction" onclick="openImportarLote()">📥 Importar lançamentos colados</button>
+<button class="drawerAction" onclick="openUndoHistory()">🕐 Histórico de desfazer</button>
       <button class="drawerAction" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button>
       <button class="drawerAction" onclick="resetAllData()" style="color:#ffb3a7">🗑️ Apagar todos os dados</button>
       <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
@@ -212,7 +215,13 @@ const DEFAULT_STATE = () => ({
 
 let state = DEFAULT_STATE();
 let sessionKey = null;
+let readOnlyMode = false;
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 function save(){
+  if(readOnlyMode){ toast('👀 Modo somente leitura — nada é salvo'); return; }
   if(!sessionKey){
     alert("⚠️ ERRO GRAVE: não foi possível salvar suas informações agora (sessão inválida). NÃO fecha o app — tira um print desta tela e me avisa. Tente recarregar a página antes de continuar lançando algo.");
     return;
@@ -264,14 +273,38 @@ function addMonthsIso(dateStr, n){ const d = new Date(dateStr+"T00:00:00"); d.se
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 function logHist(text){ state.history.unshift({id:uid('h'), ts:new Date().toISOString(), text}); if(state.history.length>500) state.history.pop(); }
 function pushMovement(type, desc, amount){ state.movements.unshift({id:uid('mov'), ts:new Date().toISOString(), type, desc, amount}); if(state.movements.length>400) state.movements.pop(); }
-function snapshot(){ state.undoSnapshots.push(JSON.stringify({saldo:state.saldo,lancamentos:state.lancamentos,cards:state.cards,loan:state.loan,debts:state.debts,boxes:state.boxes,movements:state.movements})); if(state.undoSnapshots.length>20) state.undoSnapshots.shift(); }
+function snapshot(){
+  const data = {saldo:state.saldo,lancamentos:state.lancamentos,cards:state.cards,loan:state.loan,debts:state.debts,boxes:state.boxes,movements:state.movements};
+  state.undoSnapshots.push(JSON.stringify({ts:new Date().toISOString(), data}));
+  if(state.undoSnapshots.length>20) state.undoSnapshots.shift();
+}
 function undoLast(){
   if(!state.undoSnapshots.length){ toast("Nada para desfazer"); return; }
-  const s = JSON.parse(state.undoSnapshots.pop());
-  Object.assign(state, s);
+  const raw = JSON.parse(state.undoSnapshots.pop());
+  const data = raw.data || raw;
+  Object.assign(state, data);
   save(); logHist("Última ação desfeita"); render(); toast("Última ação desfeita");
 }
-["Cigarros","Farmácia"].forEach(()=>{}); // no-op placeholder to keep structure stable
+function openUndoHistory(){
+  toggleDrawer(false);
+  if(!state.undoSnapshots.length){ toast("Nada no histórico de desfazer ainda"); return; }
+  const items = state.undoSnapshots.map((raw, idx)=>{
+    let parsed; try{ parsed = JSON.parse(raw); }catch(e){ parsed = null; }
+    const ts = parsed && parsed.ts ? new Date(parsed.ts).toLocaleString('pt-BR') : 'sem data (registro antigo)';
+    return {idx, ts};
+  }).reverse().map(({idx,ts})=>`<div class="row"><span>${ts}</span><button class="btn" onclick="restoreUndoSnapshot(${idx})">Restaurar</button></div>`).join('');
+  openSheet('Histórico de desfazer', `<div class="muted" style="margin-bottom:10px">Escolha um ponto pra voltar. Isso desfaz tudo que veio depois dele (até 20 ações atrás).</div>${items}`);
+}
+function restoreUndoSnapshot(idx){
+  const ok = confirm('Isso vai voltar seus dados pro estado daquele momento, descartando tudo que foi feito depois. Continuar?');
+  if(!ok) return;
+  const raw = state.undoSnapshots[idx];
+  let parsed; try{ parsed = JSON.parse(raw); }catch(e){ toast('Não foi possível restaurar este ponto'); return; }
+  const data = parsed.data || parsed;
+  state.undoSnapshots = state.undoSnapshots.slice(0, idx);
+  Object.assign(state, data);
+  save(); logHist('Restaurado a partir do histórico de desfazer'); closeSheet(); render(); toast('Restaurado!');
+}
 
 /* ================= MODO ESCURO ================= */
 function toggleDarkMode(){
@@ -543,13 +576,26 @@ async function tryUnlock(){
   const errEl = document.getElementById('lockErr');
   errEl.textContent = '';
   try{
+    const viewPinHash = localStorage.getItem('dioneViewPinHash');
+    const isViewPin = viewPinHash && (await sha256Hex(val)) === viewPinHash;
     if(localStorage.getItem('dioneDataEnc')){
-      const saltB64 = localStorage.getItem('dioneSalt');
-      const { key } = await deriveKeyFromPassword(val, saltB64);
-      const payload = JSON.parse(localStorage.getItem('dioneDataEnc'));
-      const loaded = await decryptJSON(key, payload);
-      state = loaded;
-      sessionKey = key;
+      if(isViewPin){
+        const rawKeyB64 = localStorage.getItem('dioneViewKeyRaw');
+        if(!rawKeyB64) throw new Error('senha errada');
+        const key = await crypto.subtle.importKey('raw', b64ToBuf(rawKeyB64), {name:'AES-GCM'}, true, ['encrypt','decrypt']);
+        const payload = JSON.parse(localStorage.getItem('dioneDataEnc'));
+        state = await decryptJSON(key, payload);
+        sessionKey = key;
+        readOnlyMode = true;
+      } else {
+        const saltB64 = localStorage.getItem('dioneSalt');
+        const { key } = await deriveKeyFromPassword(val, saltB64);
+        const payload = JSON.parse(localStorage.getItem('dioneDataEnc'));
+        const loaded = await decryptJSON(key, payload);
+        state = loaded;
+        sessionKey = key;
+        readOnlyMode = false;
+      }
     } else if(localStorage.getItem('dioneData2')){
       const raw = JSON.parse(localStorage.getItem('dioneData2'));
       if(val !== raw.password) throw new Error('senha errada');
@@ -558,6 +604,7 @@ async function tryUnlock(){
       const { key, saltB64 } = await deriveKeyFromPassword(val, null);
       localStorage.setItem('dioneSalt', saltB64);
       sessionKey = key;
+      readOnlyMode = false;
       await encryptAndPersist();
       localStorage.removeItem('dioneData2');
     } else {
@@ -567,6 +614,7 @@ async function tryUnlock(){
       const { key, saltB64 } = await deriveKeyFromPassword(val, null);
       localStorage.setItem('dioneSalt', saltB64);
       sessionKey = key;
+      readOnlyMode = false;
       await encryptAndPersist();
     }
     if(state.pendingSalaryDeduction===undefined) state.pendingSalaryDeduction = 0;
@@ -597,6 +645,7 @@ function lockApp(){
   document.getElementById('app').style.display='none';
   document.getElementById('lockScreen').style.display='flex';
   sessionKey = null;
+  readOnlyMode = false;
   state = DEFAULT_STATE();
 }
 function forgotPw(){
@@ -800,9 +849,11 @@ function render(){
     projecao: renderProjecao, historico: renderHistorico, calendario: renderCalendario,
     relatorios: renderRelatorios, fechamento: renderFechamento,
   };
-  c.innerHTML = renderers[currentTab]();
+  c.innerHTML = (readOnlyMode ? '<div style="background:var(--gold);color:#3a2b06;text-align:center;padding:8px;font-weight:600;font-size:13px;border-radius:10px;margin-bottom:10px">👀 Modo somente leitura — você está vendo, mas não pode editar</div>' : '') + renderers[currentTab]();
   const fab = document.getElementById('fabBtn');
-  fab.style.display = 'flex';
+  const fabDidi = document.getElementById('fabDidiBtn');
+  fab.style.display = readOnlyMode ? 'none' : 'flex';
+  if(fabDidi) fabDidi.style.display = readOnlyMode ? 'none' : 'flex';
   if(currentTab==='calendario') drawCalendar();
   if(currentTab==='situacao'){ drawProjectionChart('chartSituacao', 12); drawCategoryPie('chartPizza'); }
 }
@@ -1038,7 +1089,8 @@ function openLancForm(id, presetCardId, presetDate){
       <label class="f">Cartão (opcional — só se for compra no cartão)</label>
       <select class="f" id="f_card"><option value="">Nenhum (saldo direto)</option>${state.cards.map(c=>`<option value="${c.id}" ${c.id===it.cardId?'selected':''}>${c.name}</option>`).join('')}</select>
     </div>
-    <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*" capture="environment">
+    <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*" capture="environment" onchange="lerValorComprovante()">
+    <div class="muted" id="ocr_status" style="display:none;margin-top:4px"></div>
     ${it.receipt?'<div class="muted">Já existe um comprovante anexado.</div>':''}
     <div class="muted" style="margin-top:6px">ℹ️ "Realizado" abate/credita na hora. "Previsto" só aplica quando a data chegar, ou toque em "Aplicar agora" na lista pra antecipar. Compras em cartão com fechamento configurado calculam a data de vencimento automaticamente.</div>
     <div style="display:flex;gap:10px;margin-top:16px">
@@ -1311,6 +1363,44 @@ function guessCategoryByKeyword(desc, cats){
   }
   return null;
 }
+/* ================= OCR DO COMPROVANTE (sob demanda) ================= */
+let _tesseractLoading = null;
+function loadTesseract(){
+  if(window.Tesseract) return Promise.resolve();
+  if(_tesseractLoading) return _tesseractLoading;
+  _tesseractLoading = new Promise((resolve, reject)=>{
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
+    script.onload = resolve;
+    script.onerror = ()=>reject(new Error('Falha ao carregar OCR'));
+    document.head.appendChild(script);
+  });
+  return _tesseractLoading;
+}
+async function lerValorComprovante(){
+  const fileInput = document.getElementById('f_receipt');
+  const statusEl = document.getElementById('ocr_status');
+  const file = fileInput.files[0];
+  if(!file || !statusEl) return;
+  statusEl.style.display = 'block';
+  statusEl.textContent = '📥 Carregando leitor de texto (só na primeira vez)...';
+  try{
+    await loadTesseract();
+    statusEl.textContent = '🔍 Lendo o comprovante...';
+    const { data: { text } } = await window.Tesseract.recognize(file, 'por');
+    const valores = [...text.matchAll(/(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/g)].map(m=>m[1]);
+    if(!valores.length){
+      statusEl.textContent = '⚠️ Não consegui identificar nenhum valor na imagem. Digite manualmente.';
+      return;
+    }
+    const maiorValor = valores.map(v=>parseFloat(v.replace(/\./g,'').replace(',','.'))).sort((a,b)=>b-a)[0];
+    const amountEl = document.getElementById('f_amount');
+    if(amountEl){ amountEl.value = maiorValor.toFixed(2); }
+    statusEl.textContent = `✅ Valor identificado: ${fmt(maiorValor)} — confira antes de salvar!`;
+  }catch(e){
+    statusEl.textContent = '⚠️ Não foi possível ler a imagem agora. Digite o valor manualmente.';
+  }
+}
 function suggestCategory(){
   const descEl = document.getElementById('f_desc');
   const catEl = document.getElementById('f_cat');
@@ -1358,6 +1448,13 @@ function saveLanc(id){
   const cardId = (type==='saida' && cardEl && cardEl.value) ? cardEl.value : null;
   const installments = (type==='saida' && ptypeEl && ptypeEl.value==='parcelado') ? Math.max(2, parseInt(document.getElementById('f_installments').value,10)||2) : 1;
   if(!desc || amount<=0 || !date){ toast("Preencha descrição, valor e data"); return; }
+  if(!id){
+    const possivelDuplicado = state.lancamentos.find(l=>!l.trashed && l.type===type && l.date===date && Number(l.amount)===Number(amount) && (l.desc||'').trim().toLowerCase()===desc.toLowerCase());
+    if(possivelDuplicado){
+      const ok = confirm(`Já existe um lançamento igual a esse:\n"${possivelDuplicado.desc}" — ${fmt(possivelDuplicado.amount)} — ${date.split('-').reverse().join('/')}\n\nTem certeza que quer lançar de novo (duplicado)?`);
+      if(!ok) return;
+    }
+  }
   const card = cardId ? cardById(cardId) : null;
   const hasCycle = card && card.closingDay && card.dueDay;
   const firstDueDate = hasCycle ? computeCardDueDate(date, card) : date;
@@ -1873,13 +1970,12 @@ function saldoEvolutionData(monthsBack){
   }
   return points;
 }
-function drawSaldoEvolutionChart(canvasId){
+function drawLineChartFromPoints(canvasId, points){
   const canvas = document.getElementById(canvasId); if(!canvas) return;
   const ctx = canvas.getContext('2d');
   const w = canvas.parentElement.clientWidth; canvas.width = w; canvas.height = 170;
   ctx.clearRect(0,0,w,170);
   const isDark = document.body.classList.contains('dark');
-  const points = saldoEvolutionData(6);
   const vals = points.map(p=>p.value);
   const min = Math.min(0, ...vals), max = Math.max(...vals, 1);
   const pad = 30, plotW = w - pad*2, plotH = 120;
@@ -1902,11 +1998,21 @@ function drawSaldoEvolutionChart(canvasId){
     ctx.fillText(p.label, x, 10+plotH+16);
   });
 }
+function drawSaldoEvolutionChart(canvasId){
+  drawLineChartFromPoints(canvasId, saldoEvolutionData(6));
+}
+function patrimonioEvolutionData(monthsBack){
+  const extraAtual = caixinhasTotal() - dividasTotal() - loanRemaining();
+  return saldoEvolutionData(monthsBack).map(p=>({ label: p.label, value: p.value + extraAtual }));
+}
+function drawPatrimonioEvolutionChart(canvasId){
+  drawLineChartFromPoints(canvasId, patrimonioEvolutionData(6));
+}
 function renderRelatorios(){
   const views = [
     ["entradasCategoria","Entradas por categoria"], ["saidasCategoria","Saídas por categoria"],
     ["cartoes","Cartões"], ["parcelas","Parcelas"], ["caixinhas","Caixinhas"], ["compromissos","Compromissos"], ["evolucao","Projeção"],
-    ["evolucaoSaldo","Evolução do saldo"], ["metas","Metas por categoria"],
+    ["evolucaoSaldo","Evolução do saldo"], ["evolucaoPatrimonio","Evolução do patrimônio"], ["metas","Metas por categoria"],
   ];
   const matchMonth = (dateStr) => !repMonth || (dateStr && dateStr.slice(0,7)===repMonth);
   let body = '';
@@ -1928,6 +2034,8 @@ function renderRelatorios(){
     body = `<canvas id="repChart" height="150"></canvas><div class="muted" style="margin-top:8px">Projeção com base na média de entradas e saídas já realizadas.</div>`;
   } else if(repView==='evolucaoSaldo'){
     body = `<canvas id="saldoEvoChart" height="170"></canvas><div class="muted" style="margin-top:8px">Saldo reconstruído com base nos lançamentos aplicados dos últimos 6 meses.</div>`;
+  } else if(repView==='evolucaoPatrimonio'){
+    body = `<canvas id="patrimonioEvoChart" height="170"></canvas><div class="muted" style="margin-top:8px">Saldo + caixinhas − dívidas − empréstimo. Atenção: caixinhas, dívidas e empréstimo usam os valores de HOJE em todos os meses (o app não guarda o histórico deles), só o saldo é reconstruído mês a mês de verdade.</div>`;
   } else if(repView==='metas'){
     const ymMeta = todayStr().slice(0,7);
     body = state.categoriesOut.map(c=>{
@@ -1944,6 +2052,7 @@ function renderRelatorios(){
   setTimeout(()=>{
     if(repView==='evolucao') drawProjectionChart('repChart',12);
     if(repView==='evolucaoSaldo') drawSaldoEvolutionChart('saldoEvoChart');
+    if(repView==='evolucaoPatrimonio') drawPatrimonioEvolutionChart('patrimonioEvoChart');
   },0);
   return `<div class="card"><h3>Relatórios</h3>
     <label class="f">Filtrar por mês (deixe em branco para tudo)</label><input class="f" type="month" value="${repMonth}" onchange="repMonth=this.value;render()">
@@ -2004,6 +2113,23 @@ function enviarFechamentoPorWhatsApp(){
   const texto = `*${subject}*\n\n${body}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
 }
+function gerarFechamentoPDF(){
+  if(!window._lastFechamentoEmail){ toast('Gere o fechamento primeiro'); return; }
+  if(!window.jspdf){ toast('Não foi possível carregar o gerador de PDF (verifique sua internet)'); return; }
+  const { subject, body } = window._lastFechamentoEmail;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('App Pessoal Dione', 14, 18);
+  doc.setFontSize(12);
+  doc.text(subject, 14, 28);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  const lines = doc.splitTextToSize(body, 180);
+  doc.text(lines, 14, 38);
+  const stamp = new Date().toISOString().slice(0,10);
+  doc.save(`fechamento-${stamp}.pdf`);
+  toast('PDF gerado!');
+}
 function renderFechamento(){
   return `<div class="card"><h3>Fechamento mensal</h3>
     <label class="f">Mês de referência</label><input class="f" type="month" value="${fechMonth}" onchange="fechMonth=this.value;render()">
@@ -2040,6 +2166,7 @@ function gerarFechamento(){
     <button class="btn block" style="margin-top:12px" onclick="salvarFechamento(${saldoFinal})">Salvar este fechamento</button>
     <button class="btn block outline" style="margin-top:10px" onclick="enviarFechamentoPorEmail()">📧 Exportar para e-mail</button>
     <button class="btn block outline" style="margin-top:10px" onclick="enviarFechamentoPorWhatsApp()">💬 Exportar para WhatsApp</button>
+    <button class="btn block outline" style="margin-top:10px" onclick="gerarFechamentoPDF()">📄 Gerar PDF</button>
   </div>`;
   window._lastFechamentoEmail = { subject: `Fechamento mensal - ${m}`, body: buildFechamentoEmailText(m, totalEntrou, totalSaiu, entradasCategoria, saidasCategoria, saldoFinal) };
   document.getElementById('fechResult').innerHTML = html;
@@ -2072,6 +2199,21 @@ function exportCSV(){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toggleDrawer(false);
+}
+async function compartilharBackup(){
+  toggleDrawer(false);
+  try{
+    const data = JSON.stringify(state, null, 2);
+    const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    const file = new File([data], `dione-backup-${stamp}.json`, {type:'application/json'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], title:'Backup App Pessoal Dione' });
+    } else {
+      toast('Compartilhamento de arquivo não suportado aqui — use "Exportar backup" e envie manualmente pelo Drive.');
+    }
+  }catch(e){
+    if(e.name !== 'AbortError') toast('Não foi possível abrir o compartilhamento.');
+  }
 }
 function exportBackup(auto){
   const data = JSON.stringify(state, null, 2);
@@ -2239,6 +2381,15 @@ function renderConfiguracoesBody(){
     <button class="btn block" style="margin-top:8px" onclick="changePassword()">Trocar senha</button>
 
     <hr class="sep">
+    <h3>Senha de visualização (somente leitura)</h3>
+    <div class="muted" style="margin-bottom:8px">Crie uma segunda senha pra outra pessoa (ex: Alessandra) ver os dados sem poder editar nada. Precisa estar logado com a senha principal pra criar essa.</div>
+    <div id="viewpin_status" class="muted" style="margin-bottom:8px">${localStorage.getItem('dioneViewPinHash') ? '✅ Senha de visualização ativa' : 'Nenhuma senha de visualização criada ainda'}</div>
+    <label class="f">Nova senha de visualização</label>
+    <input class="f" id="cfg_viewpin" type="password" inputmode="numeric" maxlength="12">
+    <button class="btn block" style="margin-top:8px" onclick="setViewPin()">Definir senha de visualização</button>
+    ${localStorage.getItem('dioneViewPinHash') ? `<button class="btn block outline" style="margin-top:8px;color:var(--red)" onclick="removeViewPin()">Remover senha de visualização</button>` : ''}
+
+    <hr class="sep">
     <h3>E-mail do fechamento mensal</h3>
     <label class="f">Enviar fechamento para</label>
     <input class="f" id="cfg_email" value="${email}" placeholder="seuemail@exemplo.com">
@@ -2261,6 +2412,24 @@ function renderConfiguracoesBody(){
     <div class="row" style="margin-top:8px"><input class="f" id="cfg_alias_spoken" placeholder="Palavra falada (ex: Marcos)"><input class="f" id="cfg_alias_term" placeholder="Buscar como (ex: marcos)"></div>
     <button class="btn block" style="margin-top:8px" onclick="addNameAlias()">Adicionar nome</button>
   `);
+}
+async function setViewPin(){
+  const pin = document.getElementById('cfg_viewpin').value.trim();
+  if(!pin || pin.length<4){ toast('A senha de visualização precisa ter pelo menos 4 caracteres'); return; }
+  if(pin === document.getElementById('lockInput')?.value){ toast('Use uma senha diferente da principal'); return; }
+  if(!sessionKey){ toast('Entre com a senha principal antes'); return; }
+  const hash = await sha256Hex(pin);
+  const rawKey = await crypto.subtle.exportKey('raw', sessionKey);
+  localStorage.setItem('dioneViewPinHash', hash);
+  localStorage.setItem('dioneViewKeyRaw', bufToB64(rawKey));
+  toast('Senha de visualização criada!');
+  renderConfiguracoesBody();
+}
+function removeViewPin(){
+  localStorage.removeItem('dioneViewPinHash');
+  localStorage.removeItem('dioneViewKeyRaw');
+  toast('Senha de visualização removida');
+  renderConfiguracoesBody();
 }
 async function changePassword(){
   const msgEl = document.getElementById('cfg_pw_msg');
@@ -2285,6 +2454,10 @@ async function changePassword(){
     if(bioRegistered()){
       const rawNova = await crypto.subtle.exportKey('raw', novaKey);
       localStorage.setItem('dioneBioKeyRaw', bufToB64(rawNova));
+    }
+    if(localStorage.getItem('dioneViewPinHash')){
+      const rawNovaView = await crypto.subtle.exportKey('raw', novaKey);
+      localStorage.setItem('dioneViewKeyRaw', bufToB64(rawNovaView));
     }
     msgEl.style.color = 'var(--green)';
     msgEl.textContent = 'Senha trocada com sucesso!';
