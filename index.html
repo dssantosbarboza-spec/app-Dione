@@ -445,10 +445,11 @@ async function unlockWithBiometric(retryCount){
     if(!state.customCategoriesIn) state.customCategoriesIn = [];
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
+    if(!state.otherAssets) state.otherAssets = [];
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     applyAutoDarkMode();
-    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); handleQuickAction();
+    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); checkRevisaoAssinaturas(); handleQuickAction();
   }catch(e){
     clearTimeout(timeoutGuard);
     const isTransient = e && e.name === 'OperationError';
@@ -570,6 +571,24 @@ function checkFechamentoReminder(){
   setTimeout(()=>fireNotify("Fechamento mensal", "Hoje é dia de gerar o fechamento do mês e exportar por e-mail."), 2200);
 }
 
+/* ================= REVISÃO DE ASSINATURAS (a cada 90 dias) ================= */
+let _assinaturasCheckedToday = null;
+function checkRevisaoAssinaturas(){
+  const today = todayStr();
+  if(_assinaturasCheckedToday===today) return;
+  _assinaturasCheckedToday = today;
+  const lastCheck = localStorage.getItem('dioneAssinaturasLastCheck');
+  if(lastCheck){
+    const diffDays = Math.floor((new Date(today) - new Date(lastCheck))/86400000);
+    if(diffDays<90) return;
+  }
+  localStorage.setItem('dioneAssinaturasLastCheck', today);
+  const assinaturas = state.lancamentos.filter(l=>!l.trashed && l.category==='Assinaturas/Streaming');
+  const nomes = [...new Set(assinaturas.map(l=>l.desc).filter(Boolean))];
+  if(!nomes.length) return;
+  setTimeout(()=>fireNotify("Hora de revisar suas assinaturas", `Você tem: ${nomes.slice(0,5).join(', ')}${nomes.length>5?'...':''}. Ainda usa todas?`), 3200);
+}
+
 /* ================= LOCK ================= */
 async function tryUnlock(){
   const val = document.getElementById('lockInput').value;
@@ -624,6 +643,7 @@ async function tryUnlock(){
     if(!state.customCategoriesIn) state.customCategoriesIn = [];
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
+    if(!state.otherAssets) state.otherAssets = [];
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     applyAutoDarkMode();
@@ -634,6 +654,7 @@ async function tryUnlock(){
     checkSpendingAnomaly();
     checkFechamentoReminder();
     checkResumoDiario();
+    checkRevisaoAssinaturas();
     handleQuickAction();
   } catch(e){
     errEl.textContent = "Senha incorreta";
@@ -795,7 +816,50 @@ function quantoPodeGastar(){
 function caixinhasTotal(){ return state.boxes.reduce((s,b)=>s+Number(b.balance||0),0); }
 function dividasTotal(){ return state.debts.filter(d=>!d.paid).reduce((s,d)=>s+Number(d.amount||0),0); }
 function loanRemaining(){ const l=state.loan; return Math.max(0,(l.installmentsCount-l.paidCount))*l.installmentValue; }
-function patrimonioTotal(){ return state.saldo + caixinhasTotal() - dividasTotal() - loanRemaining(); }
+function outrosBensTotal(){ return (state.otherAssets||[]).reduce((s,a)=>s+Number(a.value||0),0); }
+function patrimonioTotal(){ return state.saldo + caixinhasTotal() + outrosBensTotal() - dividasTotal() - loanRemaining(); }
+function mediaGastosMensais(meses){
+  meses = meses || 3;
+  const hoje = todayStr();
+  const [y,m] = hoje.slice(0,7).split('-').map(Number);
+  let total = 0, count = 0;
+  for(let i=1;i<=meses;i++){
+    let mm=m-i, yy=y; while(mm<=0){ mm+=12; yy-=1; }
+    const ym = `${yy}-${String(mm).padStart(2,'0')}`;
+    const gasto = totalMesPorTipo(ym,'saida');
+    if(gasto>0){ total += gasto; count++; }
+  }
+  return count ? total/count : 0;
+}
+function mesesDeReservaCobertos(){
+  const media = mediaGastosMensais(3);
+  if(media<=0) return null;
+  return caixinhasTotal() / media;
+}
+function calcularTermometroFinanceiro(){
+  const ym = todayStr().slice(0,7);
+  const entrouMes = totalMesPorTipo(ym,'entrada');
+  const saiuMes = totalMesPorTipo(ym,'saida');
+  const sobraPct = entrouMes>0 ? ((entrouMes-saiuMes)/entrouMes*100) : 0;
+  let pontos = 0;
+  if(sobraPct>=15) pontos += 40;
+  else if(sobraPct>=5) pontos += 25;
+  else if(sobraPct>=0) pontos += 10;
+  const meses = mesesDeReservaCobertos();
+  if(meses!==null){
+    if(meses>=3) pontos += 30;
+    else if(meses>=1) pontos += 15;
+    else if(meses>0) pontos += 5;
+  }
+  if(dividasTotal()===0) pontos += 20; else if(dividasTotal()<500) pontos += 10;
+  if(state.saldo>=0) pontos += 10;
+  pontos = Math.max(0, Math.min(100, Math.round(pontos)));
+  let label, cor;
+  if(pontos>=71){ label='Saudável'; cor='var(--green)'; }
+  else if(pontos>=41){ label='Razoável'; cor='var(--gold)'; }
+  else { label='Atenção'; cor='var(--red)'; }
+  return { pontos, label, cor, sobraPct, meses };
+}
 function totalMesPorTipo(ym, tipo){
   return activeLanc().filter(l=>l.applied && l.type===tipo && l.date && l.date.slice(0,7)===ym)
     .reduce((s,l)=> s + (tipo==='entrada' && l._creditedAmount!=null ? Number(l._creditedAmount) : Number(l.amount||0)), 0);
@@ -883,7 +947,22 @@ function renderSituacao(){
     const diff = Math.round((new Date(c.date+"T00:00:00") - new Date(todayStr()+"T00:00:00"))/86400000);
     return diff>=0 && diff<=30;
   }).slice(0,6);
+  const termo = calcularTermometroFinanceiro();
+  const meses = mesesDeReservaCobertos();
   return `
+  <div class="card">
+    <h3 style="display:flex;align-items:center;justify-content:space-between">
+      <span>🌡️ Termômetro financeiro</span>
+      <b style="color:${termo.cor}">${termo.label}</b>
+    </h3>
+    <div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${termo.pontos}%;background:${termo.cor}"></div></div></div>
+    <div class="muted" style="margin-top:6px">${termo.pontos}/100 — baseado em quanto sobra do que entra, reserva de emergência e dívidas em aberto</div>
+  </div>
+  <div class="card">
+    <h3>Reserva de emergência</h3>
+    <div class="big" style="font-size:19px">${meses===null ? 'Sem dados suficientes' : `Cobre ${meses.toFixed(1)} ${meses===1?'mês':'meses'} de gastos`}</div>
+    <div class="muted">Caixinhas ÷ média de gastos dos últimos 3 meses</div>
+  </div>
   <div class="card">
     <h3 style="display:flex;align-items:center;justify-content:space-between">
       <span>Saldo disponível</span>
@@ -902,7 +981,7 @@ function renderSituacao(){
     <div class="card"><h3>Recebido este mês</h3><div class="big" style="font-size:19px;color:var(--green)">${isSaldoHidden() ? '••••••' : fmt(recebidoMes)}</div></div>
     <div class="card"><h3>Pago este mês</h3><div class="big" style="font-size:19px;color:var(--red)">${isSaldoHidden() ? '••••••' : fmt(pagoMes)}</div></div>
   </div>
-  <div class="card"><h3>Patrimônio total</h3><div class="big" style="font-size:19px">${isSaldoHidden() ? '••••••' : fmt(patrimonioTotal())}</div><div class="muted">saldo + caixinhas − dívidas − empréstimo</div></div>
+  <div class="card"><h3>Patrimônio total</h3><div class="big" style="font-size:19px">${isSaldoHidden() ? '••••••' : fmt(patrimonioTotal())}</div><div class="muted">saldo + caixinhas + outros bens − dívidas − empréstimo</div></div>
   <div class="card">
     <h3>Cartões</h3>
     ${state.cards.map(c=>{
@@ -2091,11 +2170,31 @@ function patrimonioEvolutionData(monthsBack){
 function drawPatrimonioEvolutionChart(canvasId){
   drawLineChartFromPoints(canvasId, patrimonioEvolutionData(6));
 }
+function renderSimulador(){
+  const el = document.getElementById('sim_resultado');
+  if(!el) return;
+  const corte = parseFloat((document.getElementById('sim_corte')?.value||'0').replace(',','.')) || 0;
+  const meses = parseInt(document.getElementById('sim_meses')?.value||'0',10) || 0;
+  if(corte<=0 || meses<=0){ el.innerHTML = '<div class="muted">Preencha os dois campos pra ver a simulação.</div>'; return; }
+  const totalAcumulado = corte * meses;
+  const dividaTotal = dividasTotal() + loanRemaining();
+  let comparativoDivida = '';
+  if(dividaTotal>0){
+    const pct = Math.min(100, (totalAcumulado/dividaTotal)*100);
+    comparativoDivida = `<div class="row"><span>Isso pagaria da sua dívida + empréstimo atual (${fmt(dividaTotal)})</span><b>${pct.toFixed(0)}%</b></div>`;
+  }
+  el.innerHTML = `
+    <div class="row"><span><b>Total acumulado em ${meses} ${meses===1?'mês':'meses'}</b></span><b style="font-size:18px">${fmt(totalAcumulado)}</b></div>
+    ${comparativoDivida}
+    <div class="muted" style="margin-top:8px">Isso é só uma simulação — o app não corta nada sozinho, é pra te ajudar a decidir uma meta.</div>
+  `;
+}
 function renderRelatorios(){
   const views = [
     ["entradasCategoria","Entradas por categoria"], ["saidasCategoria","Saídas por categoria"],
     ["cartoes","Cartões"], ["parcelas","Parcelas"], ["caixinhas","Caixinhas"], ["compromissos","Compromissos"], ["evolucao","Projeção"],
     ["evolucaoSaldo","Evolução do saldo"], ["evolucaoPatrimonio","Evolução do patrimônio"], ["metas","Metas por categoria"],
+    ["comparativoAnual","Comparado ao ano passado"], ["simulador","Simulador \"e se\""],
   ];
   const matchMonth = (dateStr) => !repMonth || (dateStr && dateStr.slice(0,7)===repMonth);
   let body = '';
@@ -2131,6 +2230,36 @@ function renderRelatorios(){
         ${budget>0 ? `<div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%;background:${over?'var(--red)':'var(--teal)'}"></div></div></div><div class="muted" style="font-size:11px">${fmt(spent)} de ${fmt(budget)} (${pct}%)${over?' — acima da meta!':''}</div>` : ''}
       </div>`;
     }).join('');
+  } else if(repView==='comparativoAnual'){
+    const hoje = todayStr();
+    const [yAtual, mAtual] = hoje.slice(0,7).split('-').map(Number);
+    const ymAtual = `${yAtual}-${String(mAtual).padStart(2,'0')}`;
+    const ymAnoPassado = `${yAtual-1}-${String(mAtual).padStart(2,'0')}`;
+    const entradaAtual = totalMesPorTipo(ymAtual,'entrada'), entradaAnterior = totalMesPorTipo(ymAnoPassado,'entrada');
+    const saidaAtual = totalMesPorTipo(ymAtual,'saida'), saidaAnterior = totalMesPorTipo(ymAnoPassado,'saida');
+    const pctVar = (atual, anterior) => anterior>0 ? (((atual-anterior)/anterior)*100) : null;
+    const varEntrada = pctVar(entradaAtual, entradaAnterior);
+    const varSaida = pctVar(saidaAtual, saidaAnterior);
+    body = `
+      <div class="muted" style="margin-bottom:10px">Comparando ${formatMonthLabel(ymAtual)} com ${formatMonthLabel(ymAnoPassado)}</div>
+      <div class="row"><span>Entradas este ano</span><b>${fmt(entradaAtual)}</b></div>
+      <div class="row"><span>Entradas ano passado</span><b>${fmt(entradaAnterior)}</b></div>
+      <div class="muted" style="margin-bottom:14px">${varEntrada===null ? '(sem dado do ano passado pra comparar)' : (varEntrada>=0?'📈 +':'📉 ')+varEntrada.toFixed(1)+'%'}</div>
+      <hr class="sep">
+      <div class="row"><span>Saídas este ano</span><b>${fmt(saidaAtual)}</b></div>
+      <div class="row"><span>Saídas ano passado</span><b>${fmt(saidaAnterior)}</b></div>
+      <div class="muted">${varSaida===null ? '(sem dado do ano passado pra comparar)' : (varSaida>=0?'📈 +':'📉 ')+varSaida.toFixed(1)+'%'}</div>
+    `;
+  } else if(repView==='simulador'){
+    body = `
+      <div class="muted" style="margin-bottom:10px">Simule cortar um valor por mês de uma categoria e veja o impacto ao longo do tempo.</div>
+      <label class="f">Corte mensal (R$)</label>
+      <input class="f" id="sim_corte" type="number" inputmode="decimal" placeholder="Ex: 200" oninput="renderSimulador()">
+      <label class="f">Aplicar durante quantos meses</label>
+      <input class="f" id="sim_meses" type="number" inputmode="numeric" value="6" oninput="renderSimulador()">
+      <div id="sim_resultado" style="margin-top:14px"></div>
+    `;
+    setTimeout(renderSimulador, 0);
   }
   setTimeout(()=>{
     if(repView==='evolucao') drawProjectionChart('repChart',12);
@@ -2333,6 +2462,7 @@ function importBackup(event){
     if(!state.customCategoriesIn) state.customCategoriesIn = [];
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
+    if(!state.otherAssets) state.otherAssets = [];
     if(!sessionKey){
       alert("⚠️ ERRO: sessão inválida, não foi possível salvar o backup importado. Recarregue o app e tente de novo.");
       return;
@@ -2494,7 +2624,29 @@ function renderConfiguracoesBody(){
     ${aliasHtml}
     <div class="row" style="margin-top:8px"><input class="f" id="cfg_alias_spoken" placeholder="Palavra falada (ex: Marcos)"><input class="f" id="cfg_alias_term" placeholder="Buscar como (ex: marcos)"></div>
     <button class="btn block" style="margin-top:8px" onclick="addNameAlias()">Adicionar nome</button>
+
+    <hr class="sep">
+    <h3>Outros bens (patrimônio)</h3>
+    <div class="muted" style="margin-bottom:8px">Coisas fora do app que fazem parte do seu patrimônio: carro, imóvel, investimentos, etc. Entram na conta de "Patrimônio total".</div>
+    ${(state.otherAssets||[]).map((a,i)=>`<div class="row"><span>${a.desc}</span><span><b>${fmt(a.value)}</b> <button style="background:none;border:none;color:var(--red);font-size:16px;padding:2px 8px;cursor:pointer" onclick="removeOtherAsset(${i})">✕</button></span></div>`).join('') || '<div class="muted">Nenhum bem cadastrado ainda</div>'}
+    <div class="row" style="margin-top:8px"><input class="f" id="cfg_asset_desc" placeholder="Descrição (ex: Carro)"><input class="f" id="cfg_asset_value" type="number" inputmode="decimal" placeholder="Valor R$"></div>
+    <button class="btn block" style="margin-top:8px" onclick="addOtherAsset()">Adicionar bem</button>
   `);
+}
+function addOtherAsset(){
+  const desc = document.getElementById('cfg_asset_desc').value.trim();
+  const value = parseFloat((document.getElementById('cfg_asset_value').value||'0').replace(',','.'));
+  if(!desc || value<=0){ toast('Preencha descrição e valor'); return; }
+  if(!state.otherAssets) state.otherAssets = [];
+  state.otherAssets.push({desc, value});
+  save();
+  toast('Bem adicionado');
+  renderConfiguracoesBody();
+}
+function removeOtherAsset(idx){
+  state.otherAssets.splice(idx,1);
+  save();
+  renderConfiguracoesBody();
 }
 async function setViewPin(){
   const pin = document.getElementById('cfg_viewpin').value.trim();
