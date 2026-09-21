@@ -1464,13 +1464,26 @@ function parseVoiceLanc(text){
   let amount = null, amountMatchStr = '';
   const m = lower.match(/(\d+(?:[.,]\d{1,2})?)/);
   if(m){ amount = parseFloat(m[1].replace(',','.')); amountMatchStr = m[0]; }
+  let status = null;
+  if(/\brealizad[oa]\b/.test(lower)) status = 'realizado';
+  else if(/\bprevist[oa]\b/.test(lower)) status = 'previsto';
+  let installments = null;
+  if(/\bà vista\b|\ba vista\b/.test(lower)) installments = 1;
+  else {
+    const parcMatch = lower.match(/parcelad[oa]?\s*(?:em)?\s*(\d{1,2})\s*x?|(\d{1,2})\s*vezes|(\d{1,2})x\b/);
+    if(parcMatch){ installments = parseInt(parcMatch[1]||parcMatch[2]||parcMatch[3],10); }
+  }
   let desc = text;
   [...inWords, ...outWords].forEach(w=>{ desc = desc.replace(new RegExp(w,'ig'), ''); });
   if(amountMatchStr) desc = desc.replace(amountMatchStr, '');
-  desc = desc.replace(/reais|real|r\$|centavos|centavo/ig,'').replace(/\s+/g,' ').trim();
+  desc = desc.replace(/reais|real|r\$|centavos|centavo/ig,'');
+  desc = desc.replace(/à vista|a vista/ig,'');
+  desc = desc.replace(/parcelad[oa]?\s*(em)?\s*\d{1,2}\s*x?/ig,'').replace(/\d{1,2}\s*vezes/ig,'').replace(/\d{1,2}x\b/ig,'');
+  desc = desc.replace(/\brealizad[oa]\b|\bprevist[oa]\b/ig,'');
+  desc = desc.replace(/\s+/g,' ').trim();
   desc = desc.replace(/^(de|do|da|no|na|em|com)\s+/i,'').trim();
   if(desc) desc = desc.charAt(0).toUpperCase()+desc.slice(1);
-  return {type, amount, desc};
+  return {type, amount, desc, status, installments};
 }
 function startVoiceLanc(){
   const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1481,7 +1494,7 @@ function startVoiceLanc(){
   rec.continuous = false;
   rec.interimResults = false;
   statusEl.style.display='block';
-  statusEl.textContent = '🎙️ Ouvindo... fale, ex: "gastei 45 reais no mercado"';
+  statusEl.textContent = '🎙️ Ouvindo... fale, ex: "22 farmácia à vista realizado"';
   try{ rec.start(); }catch(e){ statusEl.textContent='Não foi possível abrir o microfone.'; return; }
   rec.onresult = (e)=>{
     const text = e.results[0][0].transcript;
@@ -1490,8 +1503,23 @@ function startVoiceLanc(){
     const typeEl = document.getElementById('f_type_es');
     if(parsed.type && typeEl){ typeEl.value = parsed.type; onLancTypeChange(); }
     if(parsed.desc){ const d = document.getElementById('f_desc'); if(d){ d.value = parsed.desc; suggestCategory(); } }
-    if(parsed.amount!=null){ const a = document.getElementById('f_amount'); if(a){ a.value = parsed.amount; updateParcPreview(); } }
-    setTimeout(()=>{ statusEl.style.display='none'; }, 4000);
+    if(parsed.amount!=null){ const a = document.getElementById('f_amount'); if(a){ a.value = parsed.amount; } }
+    if(parsed.status){ const s = document.getElementById('f_status'); if(s) s.value = parsed.status; }
+    const ptypeEl = document.getElementById('f_ptype');
+    const parcBox = document.getElementById('parcBox');
+    if(parsed.installments!=null && ptypeEl){
+      if(parsed.installments<=1){
+        ptypeEl.value = 'avista';
+        if(parcBox) parcBox.style.display = 'none';
+      } else {
+        ptypeEl.value = 'parcelado';
+        if(parcBox) parcBox.style.display = 'block';
+        const instEl = document.getElementById('f_installments');
+        if(instEl) instEl.value = String(Math.min(24, Math.max(2, parsed.installments)));
+      }
+    }
+    updateParcPreview();
+    setTimeout(()=>{ statusEl.style.display='none'; }, 5000);
   };
   rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
 }
