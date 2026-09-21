@@ -5,28 +5,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>App Pessoal Dione</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F4A44'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23E3AC52' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F4A44'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23E3AC52' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="manifest" id="manifestLink">
-<meta name="theme-color" content="#0F3D3E">
+<meta name="theme-color" content="#0F4A44">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F3F1EA; --panel:#FFFFFF; --ink:#132C2A; --ink-soft:#5B6C69;
-  --teal:#0F3D3E; --teal-dark:#0A2B2C; --gold:#C9973A; --gold-soft:#EFE1C4;
-  --green:#2E7D5B; --green-soft:#E4F1EA; --red:#B23A2E; --red-soft:#F8E4E1;
-  --line:#E4E0D3; --radius:16px;
+  --bg:#F3EFE4; --panel:#FFFFFF; --ink:#1A2B27; --ink-soft:#5F726C;
+  --teal:#0F4A44; --teal-dark:#0A332F; --gold:#C98A2E; --gold-soft:#F5E3C2;
+  --green:#1F9A72; --green-soft:#DFF3EA; --red:#D6455B; --red-soft:#FBE1E4;
+  --line:#E6DFCC; --radius:20px;
 }
 body.dark{
---bg:#12201F; --panel:#1B2A28; --ink:#EDEAE0; --ink-soft:#9AB0AC;
---teal:#1E6B6C; --teal-dark:#0A2B2C; --gold:#D9AF5D; --gold-soft:#3A3221;
---green:#4FAF82; --green-soft:#1D3A2C; --red:#E37B6C; --red-soft:#3A211D;
---line:#2C3B39;
+--bg:#0A1F1D; --panel:#123531; --ink:#F4F1E8; --ink-soft:#9FB8B2;
+--teal:#1E7A70; --teal-dark:#0A332F; --gold:#E3AC52; --gold-soft:#3A2E17;
+--green:#4ED8A8; --green-soft:#123A30; --red:#F2545B; --red-soft:#3A1B1D;
+--line:rgba(244,241,232,0.09);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;height:100%;}
-h1,h2,h3,.num{font-family:'Space Grotesk',sans-serif;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Manrope',sans-serif;height:100%;}
+h1,h2,h3,.num,.big{font-family:'Fraunces',serif;font-weight:600;}
 button{font-family:inherit;cursor:pointer;}
 input,select,textarea{font-family:inherit;}
 ::-webkit-scrollbar{width:6px;height:6px;}
@@ -1037,7 +1037,44 @@ function renderSituacao(){
   }).slice(0,6);
   const termo = calcularTermometroFinanceiro();
   const meses = mesesDeReservaCobertos();
+  const circ = 2*Math.PI*50;
+  const ringPct = saldo!==0 ? Math.max(0,Math.min(100,pct)) : 0;
   return `
+  <div class="card" style="padding:20px 18px">
+    <div style="display:flex;align-items:center;gap:18px">
+      <div style="position:relative;width:104px;height:104px;flex-shrink:0">
+        <svg width="104" height="104" viewBox="0 0 104 104" style="transform:rotate(-90deg)">
+          <circle cx="52" cy="52" r="44" fill="none" stroke="var(--line)" stroke-width="9"/>
+          <circle cx="52" cy="52" r="44" fill="none" stroke="url(#ringGradSit)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(ringPct/100)*(2*Math.PI*44)} ${2*Math.PI*44}"/>
+          <defs><linearGradient id="ringGradSit" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--green)"/><stop offset="100%" stop-color="var(--gold)"/></linearGradient></defs>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <span class="muted" style="font-size:9px;letter-spacing:.03em">DISPONÍVEL</span>
+          <b style="font-family:'Fraunces',serif;font-size:15px">${isSaldoHidden() ? '••' : ringPct.toFixed(0)+'%'}</b>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div class="muted" style="font-size:12px;margin-bottom:2px">Saldo disponível</div>
+        <div class="big" style="font-size:30px;line-height:1.05;color:${saldo>=0?'var(--ink)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(saldo)}</div>
+        <div class="muted" style="font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px">
+          <button onclick="toggleSaldoVisivel()" style="background:none;border:none;font-size:15px;cursor:pointer;padding:0">${isSaldoHidden()?'🙈':'👁️'}</button>
+          <span>${isSaldoHidden() ? 'Toque pra mostrar' : 'Toque pra ocultar'}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card" style="padding:14px">
+      <div style="width:26px;height:26px;border-radius:8px;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:13px;margin-bottom:6px">↓</div>
+      <div class="muted" style="font-size:10.5px">Recebido este mês</div>
+      <div class="big" style="font-size:19px;color:var(--green)">${isSaldoHidden() ? '••••••' : fmt(recebidoMes)}</div>
+    </div>
+    <div class="card" style="padding:14px">
+      <div style="width:26px;height:26px;border-radius:8px;background:var(--red-soft);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;margin-bottom:6px">↑</div>
+      <div class="muted" style="font-size:10.5px">Pago este mês</div>
+      <div class="big" style="font-size:19px;color:var(--red)">${isSaldoHidden() ? '••••••' : fmt(pagoMes)}</div>
+    </div>
+  </div>
   <div class="card">
     <h3 style="display:flex;align-items:center;justify-content:space-between">
       <span>🌡️ Termômetro financeiro</span>
@@ -1054,22 +1091,10 @@ function renderSituacao(){
   </div>
   ${(()=>{ const dividaTotal = dividasTotal()+loanRemaining(); if(dividaTotal<=0) return ''; const mesesQuitar = mesesParaQuitarDividas(); return `<div class="card"><h3>Tempo para quitar dívidas + empréstimo</h3><div class="big" style="font-size:19px">${mesesQuitar===null ? 'Sem sobra suficiente pra estimar' : `~${mesesQuitar.toFixed(1)} ${mesesQuitar===1?'mês':'meses'}`}</div><div class="muted">${fmt(dividaTotal)} em aberto, no ritmo médio de sobra dos últimos 3 meses</div></div>`; })()}
   <div class="card">
-    <h3 style="display:flex;align-items:center;justify-content:space-between">
-      <span>Saldo disponível</span>
-      <button onclick="toggleSaldoVisivel()" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0 4px">${isSaldoHidden()?'🙈':'👁️'}</button>
-    </h3>
-    <div class="big" style="color:${saldo>=0?'var(--ink)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(saldo)}</div>
-    <div class="muted">Único saldo geral — soma tudo que já entrou e saiu</div>
-  </div>
-  <div class="card">
     <h3>Quanto posso gastar</h3>
     <div class="big" style="color:${podeGastar>=0?'var(--green)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(podeGastar)}</div>
     ${isSaldoHidden() ? '' : `<div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%"></div></div></div>`}
     <div class="muted" style="margin-top:6px">Diferente do saldo disponível: aqui já descontamos saídas previstas, parcela do empréstimo e dívidas com vencimento neste mês (mesmo que a data já tenha passado e ainda não tenha sido paga).</div>
-  </div>
-  <div class="grid2">
-    <div class="card"><h3>Recebido este mês</h3><div class="big" style="font-size:19px;color:var(--green)">${isSaldoHidden() ? '••••••' : fmt(recebidoMes)}</div></div>
-    <div class="card"><h3>Pago este mês</h3><div class="big" style="font-size:19px;color:var(--red)">${isSaldoHidden() ? '••••••' : fmt(pagoMes)}</div></div>
   </div>
   <div class="card"><h3>Patrimônio total</h3><div class="big" style="font-size:19px">${isSaldoHidden() ? '••••••' : fmt(patrimonioTotal())}</div><div class="muted">saldo + caixinhas + outros bens − dívidas − empréstimo</div></div>
   <div class="card">
@@ -1127,7 +1152,7 @@ function drawCategoryPie(canvasId){
     return;
   }
   const total = entries.reduce((s,[,v])=>s+v,0);
-  const colors = ['#0F3D3E','#C9973A','#2E7D5B','#B23A2E','#5B6C69','#7fc7a5','#8a6412','#4a7a9e','#9c5fb0','#d1895e'];
+  const colors = ['#D6455B','#C98A2E','#1F9A72','#5F726C','#6FA8DC','#9c5fb0','#0F4A44','#E3AC52','#4ED8A8','#d1895e'];
   const cx = 70, cy = 95, r = 70;
   let start = -Math.PI/2;
   entries.forEach(([cat,val],i)=>{
@@ -1162,7 +1187,7 @@ function drawProjectionChart(canvasId, months){
   const min = Math.min(...pts,0), max = Math.max(...pts,1);
   const pad = 20;
   const xstep = (w-pad*2)/months;
-  ctx.strokeStyle = '#0F3D3E'; ctx.lineWidth=2.5; ctx.beginPath();
+  ctx.strokeStyle = '#0F4A44'; ctx.lineWidth=2.5; ctx.beginPath();
   pts.forEach((v,i)=>{
     const x = pad+i*xstep;
     const y = 120 - ((v-min)/(max-min||1))*100;
@@ -1172,7 +1197,7 @@ function drawProjectionChart(canvasId, months){
   [6,9,12].forEach(m=>{
     if(m>months) return;
     const x = pad+m*xstep; const y = 120-((pts[m]-min)/(max-min||1))*100;
-    ctx.fillStyle='#C9973A'; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill();
+    ctx.fillStyle='#C98A2E'; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill();
     ctx.fillStyle='#132C2A'; ctx.font='11px Inter'; ctx.textAlign='center';
     ctx.fillText(m+'m: '+fmt(pts[m]).replace('R$',''), x, y-10);
   });
@@ -2234,7 +2259,7 @@ function drawLineChartFromPoints(canvasId, points){
   const xStep = plotW / (points.length-1 || 1);
   ctx.strokeStyle = isDark ? '#3a4a48' : '#D9D4C4'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(pad, 10+plotH); ctx.lineTo(pad+plotW, 10+plotH); ctx.stroke();
-  ctx.strokeStyle = '#C9973A'; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.strokeStyle = '#C98A2E'; ctx.lineWidth = 2; ctx.beginPath();
   points.forEach((p,i)=>{
     const x = pad + i*xStep;
     const y = 10 + plotH - ((p.value-min)/(max-min||1))*plotH;
@@ -2245,7 +2270,7 @@ function drawLineChartFromPoints(canvasId, points){
   points.forEach((p,i)=>{
     const x = pad + i*xStep;
     const y = 10 + plotH - ((p.value-min)/(max-min||1))*plotH;
-    ctx.fillStyle = '#0F3D3E'; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#0F4A44'; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
     ctx.fillStyle = isDark? '#EDEAE0':'#132C2A';
     ctx.fillText(p.label, x, 10+plotH+16);
   });
@@ -2909,14 +2934,14 @@ refreshBioUI();
 
 /* ================= PWA: MANIFEST + SERVICE WORKER + ATALHO ================= */
 (function setupManifest(){
-  const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E";
+  const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F4A44'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23E3AC52' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E";
   const manifest = {
     name: "App Pessoal Dione",
     short_name: "Dione",
     start_url: "./index.html",
     display: "standalone",
-    background_color: "#0F3D3E",
-    theme_color: "#0F3D3E",
+    background_color: "#0F4A44",
+    theme_color: "#0F4A44",
     icons: [{ src: iconSvg, sizes: "any", type: "image/svg+xml", purpose: "any" }],
     shortcuts: [
       { name: "Novo lançamento", short_name: "Novo", url: "./index.html?action=quickadd", description: "Registrar uma despesa rapidamente" }
