@@ -1091,7 +1091,7 @@ function openLancForm(id, presetCardId, presetDate){
     </div>
     <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*" capture="environment" onchange="lerValorComprovante()">
     <div class="muted" id="ocr_status" style="display:none;margin-top:4px"></div>
-    <button type="button" class="btn block outline" style="margin-top:8px" onclick="lerCodigoBarrasBoleto()">📊 É um boleto? Ler código de barras</button>
+    <button type="button" class="btn block outline" style="margin-top:8px" onclick="lerCodigoBarrasBoleto()">📊 Ler código de barras ou QR (boleto/Pix)</button>
     ${it.receipt?'<div class="muted">Já existe um comprovante anexado.</div>':''}
     <div class="muted" style="margin-top:6px">ℹ️ "Realizado" abate/credita na hora. "Previsto" só aplica quando a data chegar, ou toque em "Aplicar agora" na lista pra antecipar. Compras em cartão com fechamento configurado calculam a data de vencimento automaticamente.</div>
     <div style="display:flex;gap:10px;margin-top:16px">
@@ -1364,44 +1364,86 @@ function guessCategoryByKeyword(desc, cats){
   }
   return null;
 }
+function linhaDigitavelToBarcode(d){
+  if(d.length !== 47) return null;
+  const campo1 = d.slice(0,10), campo2 = d.slice(10,21), campo3 = d.slice(21,32);
+  const dvGeral = d.slice(32,33), campo5 = d.slice(33,47);
+  return campo1.slice(0,4) + dvGeral + campo5 + campo1.slice(4,9) + campo2.slice(0,10) + campo3.slice(0,10);
+}
+function parseEMVTag(str, tag){
+  let i = 0;
+  while(i < str.length-4){
+    const id = str.substr(i,2);
+    const len = parseInt(str.substr(i+2,2),10);
+    if(isNaN(len)) break;
+    const value = str.substr(i+4, len);
+    if(id === tag) return value;
+    i += 4 + len;
+  }
+  return null;
+}
+function preencherDoBarcode44(raw){
+  const fatorVenc = parseInt(raw.slice(5,9),10);
+  const valor = parseInt(raw.slice(9,19),10)/100;
+  const amountEl = document.getElementById('f_amount');
+  if(amountEl) amountEl.value = valor.toFixed(2);
+  let vencTexto = '';
+  if(fatorVenc>0 && fatorVenc<99999){
+    const vencDate = new Date(Date.UTC(1997,9,7) + fatorVenc*86400000);
+    const dateEl = document.getElementById('f_date');
+    if(dateEl) dateEl.value = vencDate.toISOString().slice(0,10);
+    vencTexto = `, vencimento ${vencDate.toLocaleDateString('pt-BR', {timeZone:'UTC'})}`;
+  }
+  return `Valor: ${fmt(valor)}${vencTexto}`;
+}
 async function lerCodigoBarrasBoleto(){
   const fileInput = document.getElementById('f_receipt');
   const statusEl = document.getElementById('ocr_status');
   const file = fileInput.files[0];
-  if(!file){ toast('Escolha a foto do boleto no campo de comprovante primeiro'); return; }
+  if(!file){ toast('Escolha a foto do boleto/QR no campo de comprovante primeiro'); return; }
   statusEl.style.display = 'block';
   if(!('BarcodeDetector' in window)){
-    statusEl.textContent = '⚠️ Este navegador não suporta leitura de código de barras. Digite o valor manualmente ou tente pela leitura de texto normal.';
+    statusEl.textContent = '⚠️ Este navegador não suporta leitura de código de barras/QR. Digite manualmente ou tente a leitura de texto.';
     return;
   }
-  statusEl.textContent = '📷 Procurando o código de barras...';
+  statusEl.textContent = '📷 Procurando código de barras ou QR code...';
   try{
     const bitmap = await createImageBitmap(file);
-    const detector = new BarcodeDetector({formats:['itf']});
-    const codes = await detector.detect(bitmap);
+    let codes = [];
+    try{
+      const detector = new BarcodeDetector({formats:['qr_code','itf','code_128']});
+      codes = await detector.detect(bitmap);
+    }catch(e){
+      const detector2 = new BarcodeDetector({formats:['qr_code']});
+      codes = await detector2.detect(bitmap);
+    }
     if(!codes.length){
-      statusEl.textContent = '⚠️ Não encontrei o código de barras na foto. Tente enquadrar melhor, com boa luz e sem inclinar.';
+      statusEl.textContent = '⚠️ Não encontrei código de barras nem QR code na foto. Tente enquadrar melhor, com boa luz.';
       return;
     }
-    const raw = codes[0].rawValue.replace(/\D/g,'');
-    if(raw.length !== 44){
-      statusEl.textContent = '⚠️ Código lido, mas não parece o código de barras de um boleto (deveria ter 44 números).';
-      return;
+    const code = codes[0];
+    const raw = code.rawValue.trim();
+    const digits = raw.replace(/\D/g,'');
+    if(digits.length===44){
+      statusEl.textContent = `✅ Código lido! ${preencherDoBarcode44(digits)} — confira antes de salvar!`;
+    } else if(digits.length===47){
+      const barcode = linhaDigitavelToBarcode(digits);
+      statusEl.textContent = `✅ Boleto lido! ${preencherDoBarcode44(barcode)} — confira antes de salvar!`;
+    } else if(raw.startsWith('000201')){
+      const valorStr = parseEMVTag(raw, '54');
+      if(valorStr){
+        const valor = parseFloat(valorStr);
+        const amountEl = document.getElementById('f_amount');
+        if(amountEl) amountEl.value = valor.toFixed(2);
+        statusEl.textContent = `✅ QR Pix lido! Valor: ${fmt(valor)} — confira antes de salvar!`;
+      } else {
+        statusEl.textContent = '⚠️ QR Pix lido, mas não veio com valor definido (comum em Pix "cobrança livre"). Digite o valor manualmente.';
+      }
+    } else {
+      statusEl.textContent = `⚠️ Código lido, mas não reconheci o formato (não é boleto nem Pix padrão). Conteúdo: "${raw.slice(0,60)}${raw.length>60?'...':''}"`;
     }
-    const fatorVenc = parseInt(raw.slice(5,9),10);
-    const valor = parseInt(raw.slice(9,19),10)/100;
-    const amountEl = document.getElementById('f_amount');
-    if(amountEl) amountEl.value = valor.toFixed(2);
-    let vencTexto = '';
-    if(fatorVenc>0 && fatorVenc<99999){
-      const vencDate = new Date(Date.UTC(1997,9,7) + fatorVenc*86400000);
-      const dateEl = document.getElementById('f_date');
-      if(dateEl) dateEl.value = vencDate.toISOString().slice(0,10);
-      vencTexto = `, vencimento ${vencDate.toLocaleDateString('pt-BR', {timeZone:'UTC'})}`;
-    }
-    statusEl.textContent = `✅ Boleto lido! Valor: ${fmt(valor)}${vencTexto} — confira antes de salvar!`;
   }catch(e){
-    statusEl.textContent = '⚠️ Não consegui ler o código de barras dessa imagem. Tente outra foto, bem focada no código.';
+    statusEl.textContent = '⚠️ Não consegui ler nenhum código nessa imagem. Tente outra foto, bem focada.';
   }
 }
 /* ================= OCR DO COMPROVANTE (sob demanda) ================= */
