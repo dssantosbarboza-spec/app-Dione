@@ -16,7 +16,7 @@
   --bg:#F3EFE4; --panel:#FFFFFF; --ink:#1A2B27; --ink-soft:#5F726C;
   --teal:#0F4A44; --teal-dark:#0A332F; --gold:#C98A2E; --gold-soft:#F5E3C2;
   --green:#1F9A72; --green-soft:#DFF3EA; --red:#D6455B; --red-soft:#FBE1E4;
-  --line:#E6DFCC; --radius:20px;
+  --line:#E6DFCC; --radius:24px;
 }
 body.dark{
 --bg:#0A1F1D; --panel:#123531; --ink:#F4F1E8; --ink-soft:#9FB8B2;
@@ -67,7 +67,7 @@ header.top .lockBtn{width:38px;height:38px;border-radius:10px;background:rgba(25
 .drawerAction{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;text-align:left;}
 
 main{flex:1;overflow-y:auto;padding:14px 14px 80px;}
-.card{background:var(--panel);border-radius:var(--radius);padding:16px;margin-bottom:12px;border:1px solid var(--line);}
+.card{background:var(--panel);border-radius:var(--radius);padding:19px 18px;margin-bottom:12px;}
 .card h3{margin:0 0 10px;font-size:14px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
 .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;}
 .row:last-child{border-bottom:none;}
@@ -1465,6 +1465,8 @@ function parseVoiceLanc(text){
   let type = null;
   if(inWords.some(w=>lower.includes(w))) type='entrada';
   else if(outWords.some(w=>lower.includes(w))) type='saida';
+  else if(/\bentrada\b/.test(lower)) type='entrada';
+  else if(/\bsaída\b|\bsaida\b/.test(lower)) type='saida';
   let amount = null, amountMatchStr = '';
   const m = lower.match(/(\d+(?:[.,]\d{1,2})?)/);
   if(m){ amount = parseFloat(m[1].replace(',','.')); amountMatchStr = m[0]; }
@@ -1479,6 +1481,7 @@ function parseVoiceLanc(text){
   }
   let desc = text;
   [...inWords, ...outWords].forEach(w=>{ desc = desc.replace(new RegExp(w,'ig'), ''); });
+  desc = desc.replace(/\bentrada\b/ig,'').replace(/\bsaída\b|\bsaida\b/ig,'');
   if(amountMatchStr) desc = desc.replace(amountMatchStr, '');
   desc = desc.replace(/reais|real|r\$|centavos|centavo/ig,'');
   desc = desc.replace(/à vista|a vista/ig,'');
@@ -1504,9 +1507,20 @@ function startVoiceLanc(){
     const text = e.results[0][0].transcript;
     statusEl.textContent = `Entendi: "${text}" — confira os campos abaixo`;
     const parsed = parseVoiceLanc(text);
+    const inferred = inferTypeFromDesc(parsed.desc || text);
+    const finalType = inferred ? inferred.type : parsed.type;
     const typeEl = document.getElementById('f_type_es');
-    if(parsed.type && typeEl){ typeEl.value = parsed.type; onLancTypeChange(); }
-    if(parsed.desc){ const d = document.getElementById('f_desc'); if(d){ d.value = parsed.desc; suggestCategory(); } }
+    if(finalType && typeEl){ typeEl.value = finalType; onLancTypeChange(); }
+    if(parsed.desc){
+      const d = document.getElementById('f_desc');
+      if(d){ d.value = parsed.desc; }
+      if(inferred && inferred.category){
+        const catEl = document.getElementById('f_cat');
+        if(catEl && [...catEl.options].some(o=>o.value===inferred.category)) catEl.value = inferred.category;
+      } else {
+        suggestCategory();
+      }
+    }
     if(parsed.amount!=null){ const a = document.getElementById('f_amount'); if(a){ a.value = parsed.amount; } }
     if(parsed.status){ const s = document.getElementById('f_status'); if(s) s.value = parsed.status; }
     const ptypeEl = document.getElementById('f_ptype');
@@ -1526,6 +1540,19 @@ function startVoiceLanc(){
     setTimeout(()=>{ statusEl.style.display='none'; }, 5000);
   };
   rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
+}
+function inferTypeFromDesc(desc){
+  if(!desc) return null;
+  const norm = normalizeText(desc);
+  for(const [cat, words] of Object.entries(CATEGORY_KEYWORDS)){
+    if(words.some(w=>norm.includes(normalizeText(w)))){
+      if(state.categoriesOut.includes(cat)) return {type:'saida', category:cat};
+      if(state.categoriesIn.includes(cat)) return {type:'entrada', category:cat};
+    }
+  }
+  for(const cat of state.categoriesOut){ if(cat.length>3 && norm.includes(normalizeText(cat))) return {type:'saida', category:cat}; }
+  for(const cat of state.categoriesIn){ if(cat.length>3 && norm.includes(normalizeText(cat))) return {type:'entrada', category:cat}; }
+  return null;
 }
 const CATEGORY_KEYWORDS = {
   'Alimentação': ['almoço','almoco','jantar','lanche','restaurante','ifood','pizza','comida','padaria','café da manhã','marmita','hamburguer','hambúrguer'],
