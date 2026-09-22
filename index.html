@@ -66,13 +66,14 @@ header.top .lockBtn{width:38px;height:38px;border-radius:10px;background:rgba(25
 .drawerFoot{border-top:1px solid rgba(255,255,255,.12);margin-top:8px;padding:14px 18px 4px;display:flex;flex-direction:column;gap:8px;}
 .drawerAction{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;text-align:left;}
 
-main{flex:1;overflow-y:auto;padding:14px 14px 80px;}
+main{flex:1;overflow-y:auto;padding:12px 10px 80px;}
 .card{background:var(--panel);border-radius:var(--radius);padding:19px 18px;margin-bottom:12px;}
 .card h3{margin:0 0 10px;font-size:14px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
 .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;}
 .row:last-child{border-bottom:none;}
 .big{font-size:26px;font-weight:700;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid2{display:flex;gap:10px;}
+.grid2>*{flex:1;min-width:0;}
 .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
 .pill.green{background:var(--green-soft);color:var(--green);}
 .pill.red{background:var(--red-soft);color:var(--red);}
@@ -1043,7 +1044,7 @@ function renderSituacao(){
   const circ = 2*Math.PI*50;
   const ringPct = saldo!==0 ? Math.max(0,Math.min(100,pct)) : 0;
   return `
-  <div class="card" style="padding:20px 18px 24px;margin:-14px -14px 12px;border:none;border-radius:0 0 28px 28px;background:linear-gradient(180deg,var(--teal-dark) 0%, var(--bg) 100%);color:#F4F1E8">
+  <div class="card" style="padding:20px 18px 24px;margin:-12px -10px 10px;border:none;border-radius:0 0 28px 28px;background:linear-gradient(180deg,var(--teal-dark) 0%, var(--bg) 100%);color:#F4F1E8">
     <div style="font-size:10px;letter-spacing:.06em;color:var(--gold);text-transform:uppercase;font-weight:700;margin-bottom:14px">Visão geral</div>
     <div style="display:flex;align-items:center;gap:18px">
       <div style="position:relative;width:104px;height:104px;flex-shrink:0">
@@ -1097,18 +1098,13 @@ function renderSituacao(){
       <div class="big" style="font-size:17px">${meses===null ? '—' : `${meses.toFixed(1)} ${meses===1?'mês':'meses'}`}</div>
     </div>
   </div>
-  <div class="card">
-    <h3>Reserva de emergência</h3>
-    <div class="big" style="font-size:19px">${meses===null ? 'Sem dados suficientes' : `Cobre ${meses.toFixed(1)} ${meses===1?'mês':'meses'} de gastos`}</div>
-    <div class="muted">Caixinhas ÷ média de gastos dos últimos 3 meses</div>
-    ${(()=>{ const faltaReserva = mesesParaMetaReserva(); if(faltaReserva===0) return `<div class="muted" style="margin-top:6px;color:var(--green)">✅ Já bateu a meta de 3 meses de reserva!</div>`; if(faltaReserva===null) return ''; return `<div class="muted" style="margin-top:6px">No ritmo atual de sobra, faltam ~${faltaReserva.toFixed(1)} meses pra juntar 3 meses de reserva</div>`; })()}
-  </div>
-  ${(()=>{ const dividaTotal = dividasTotal()+loanRemaining(); if(dividaTotal<=0) return ''; const mesesQuitar = mesesParaQuitarDividas(); return `<div class="card"><h3>Tempo para quitar dívidas + empréstimo</h3><div class="big" style="font-size:19px">${mesesQuitar===null ? 'Sem sobra suficiente pra estimar' : `~${mesesQuitar.toFixed(1)} ${mesesQuitar===1?'mês':'meses'}`}</div><div class="muted">${fmt(dividaTotal)} em aberto, no ritmo médio de sobra dos últimos 3 meses</div></div>`; })()}
-  <div class="card">
-    <h3>Quanto posso gastar</h3>
-    <div class="big" style="color:${podeGastar>=0?'var(--green)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(podeGastar)}</div>
-    ${isSaldoHidden() ? '' : `<div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%"></div></div></div>`}
-    <div class="muted" style="margin-top:6px">Diferente do saldo disponível: aqui já descontamos saídas previstas, parcela do empréstimo e dívidas com vencimento neste mês (mesmo que a data já tenha passado e ainda não tenha sido paga).</div>
+  <div class="grid2">
+    <div class="card" style="padding:14px">
+      <div class="muted" style="font-size:10.5px;margin-bottom:5px">Posso gastar</div>
+      <div class="big" style="font-size:17px;color:${podeGastar>=0?'var(--green)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(podeGastar)}</div>
+      ${isSaldoHidden() ? '' : `<div class="gaugeWrap" style="margin-top:6px"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%"></div></div></div>`}
+    </div>
+    ${(()=>{ const dividaTotal = dividasTotal()+loanRemaining(); if(dividaTotal<=0) return `<div class="card" style="padding:14px"><div class="muted" style="font-size:10.5px;margin-bottom:5px">Dívidas + empréstimo</div><div class="big" style="font-size:17px;color:var(--green)">Zerado ✅</div></div>`; const mesesQuitar = mesesParaQuitarDividas(); return `<div class="card" style="padding:14px"><div class="muted" style="font-size:10.5px;margin-bottom:5px">Quita dívidas em</div><div class="big" style="font-size:17px">${mesesQuitar===null ? '—' : `~${mesesQuitar.toFixed(1)} ${mesesQuitar===1?'mês':'meses'}`}</div></div>`; })()}
   </div>
   <div class="card">
     <h3>Cartões</h3>
