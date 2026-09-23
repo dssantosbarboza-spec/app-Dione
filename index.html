@@ -1104,7 +1104,6 @@ function renderSituacao(){
       <div class="big" style="font-size:17px;color:${podeGastar>=0?'var(--green)':'var(--red)'}">${isSaldoHidden() ? '••••••' : fmt(podeGastar)}</div>
       ${isSaldoHidden() ? '' : `<div class="gaugeWrap" style="margin-top:6px"><div class="gaugeTrack"><div class="gaugeFill" style="width:${pct}%"></div></div></div>`}
     </div>
-    ${(()=>{ const dividaTotal = dividasTotal()+loanRemaining(); if(dividaTotal<=0) return `<div class="card" style="padding:14px"><div class="muted" style="font-size:10.5px;margin-bottom:5px">Dívidas + empréstimo</div><div class="big" style="font-size:17px;color:var(--green)">Zerado ✅</div></div>`; const mesesQuitar = mesesParaQuitarDividas(); return `<div class="card" style="padding:14px"><div class="muted" style="font-size:10.5px;margin-bottom:5px">Quita dívidas em</div><div class="big" style="font-size:17px">${mesesQuitar===null ? '—' : `~${mesesQuitar.toFixed(1)} ${mesesQuitar===1?'mês':'meses'}`}</div></div>`; })()}
   </div>
   <div class="card">
     <h3>Cartões</h3>
@@ -1321,8 +1320,11 @@ function startVoiceQuery(){
 function falarComoAle(texto){
   if("speechSynthesis" in window){
     try{
+      window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(texto);
       utter.lang = 'pt-BR';
+      utter.rate = 1;
+      utter.onend = ()=>{};
       window.speechSynthesis.speak(utter);
     }catch(e){}
   }
@@ -1998,6 +2000,7 @@ function renderEmprestimo(){
     <button class="btn small outline" style="margin-top:4px" onclick="openDebtForm('${d.id}')">Editar</button></span></div>`).join(''):'<div class="emptyState">Nenhuma dívida cadastrada</div>'}
   <div class="muted" style="margin-top:8px">Total em aberto: <b>${fmt(dividasTotal())}</b></div>
   </div>
+  ${(()=>{ const dividaTotal = dividasTotal()+loanRemaining(); if(dividaTotal<=0) return `<div class="card"><h3>Tempo para quitar tudo</h3><div class="big" style="color:var(--green)">Zerado ✅</div></div>`; const mesesQuitar = mesesParaQuitarDividas(); return `<div class="card"><h3>Tempo para quitar tudo</h3><div class="big" style="font-size:19px">${mesesQuitar===null ? 'Sem sobra suficiente pra estimar' : `~${mesesQuitar.toFixed(1)} ${mesesQuitar===1?'mês':'meses'}`}</div><div class="muted">${fmt(dividaTotal)} em aberto (dívidas + empréstimo), no ritmo médio de sobra dos últimos 3 meses</div></div>`; })()}
   <div class="card"><button class="btn outline block" onclick="openDebtForm()">+ Nova dívida</button></div>`;
 }
 function payLoanInstallment(){
