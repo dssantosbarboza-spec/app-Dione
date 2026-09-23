@@ -1042,6 +1042,7 @@ function renderSituacao(){
   const termo = calcularTermometroFinanceiro();
   const meses = mesesDeReservaCobertos();
   const circ = 2*Math.PI*50;
+  const isComprometido = podeGastar<0;
   const ringPct = saldo!==0 ? Math.max(0,Math.min(100,pct)) : 0;
   return `
   <div class="card" style="padding:20px 18px 24px;margin:-12px -10px 10px;border:none;border-radius:0 0 28px 28px;background:linear-gradient(180deg,var(--teal-dark) 0%, var(--bg) 100%);color:#F4F1E8">
@@ -1050,12 +1051,14 @@ function renderSituacao(){
       <div style="position:relative;width:104px;height:104px;flex-shrink:0">
         <svg width="104" height="104" viewBox="0 0 104 104" style="transform:rotate(-90deg)">
           <circle cx="52" cy="52" r="44" fill="none" stroke="rgba(244,241,232,0.15)" stroke-width="9"/>
-          <circle cx="52" cy="52" r="44" fill="none" stroke="url(#ringGradSit)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(ringPct/100)*(2*Math.PI*44)} ${2*Math.PI*44}"/>
+          ${isComprometido
+            ? `<circle cx="52" cy="52" r="44" fill="none" stroke="var(--red)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${2*Math.PI*44} ${2*Math.PI*44}"/>`
+            : `<circle cx="52" cy="52" r="44" fill="none" stroke="url(#ringGradSit)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(ringPct/100)*(2*Math.PI*44)} ${2*Math.PI*44}"/>`}
           <defs><linearGradient id="ringGradSit" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--green)"/><stop offset="100%" stop-color="var(--gold)"/></linearGradient></defs>
         </svg>
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-          <span style="font-size:9px;letter-spacing:.03em;color:#9FB8B2">DISPONÍVEL</span>
-          <b style="font-family:'Fraunces',serif;font-size:15px;color:#F4F1E8">${isSaldoHidden() ? '••' : ringPct.toFixed(0)+'%'}</b>
+          <span style="font-size:9px;letter-spacing:.03em;color:#9FB8B2">${isComprometido ? 'ATENÇÃO' : 'DISPONÍVEL'}</span>
+          <b style="font-family:'Fraunces',serif;font-size:${isComprometido?'11px':'15px'};color:${isComprometido?'var(--red)':'#F4F1E8'}">${isSaldoHidden() ? '••' : (isComprometido ? 'Comprometido' : ringPct.toFixed(0)+'%')}</b>
         </div>
       </div>
       <div style="flex:1">
