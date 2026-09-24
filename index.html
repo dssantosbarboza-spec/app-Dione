@@ -1083,13 +1083,13 @@ function renderSituacao(){
       <div class="big" style="font-size:19px;color:var(--red)">${isSaldoHidden() ? '••••••' : fmt(pagoMes)}</div>
     </div>
   </div>
-  <div class="card">
-    <h3 style="display:flex;align-items:center;justify-content:space-between">
+  <div class="card" style="padding:13px 16px">
+    <h3 style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px">
       <span>🌡️ Termômetro financeiro</span>
-      <b style="color:${termo.cor};font-family:'Fraunces',serif;font-size:16px">${termo.label}</b>
+      <b style="color:${termo.cor};font-family:'Fraunces',serif;font-size:13px">${termo.label}</b>
     </h3>
-    <div class="gaugeWrap"><div class="gaugeTrack"><div class="gaugeFill" style="width:${termo.pontos}%;background:${termo.cor}"></div></div></div>
-    <div class="muted" style="margin-top:6px">${termo.pontos}/100 — baseado em quanto sobra do que entra, reserva de emergência e dívidas em aberto</div>
+    <div class="gaugeWrap" style="margin-top:4px"><div class="gaugeTrack" style="height:6px"><div class="gaugeFill" style="width:${termo.pontos}%;background:${termo.cor}"></div></div></div>
+    <div class="muted" style="margin-top:5px;font-size:10.5px">${termo.pontos}/100</div>
   </div>
   <div class="card" style="display:flex;padding:0;overflow:hidden">
     <div style="flex:1;padding:15px 16px;border-right:1px solid var(--line)">
@@ -1112,29 +1112,12 @@ function renderSituacao(){
     <h3>Cartões</h3>
     ${state.cards.map(c=>{
       const faturaAberta = activeLanc().filter(l=>l.cardId===c.id && !l.applied).reduce((s,l)=>s+Number(l.amount||0),0);
-      return `<div class="row"><span>${c.name}</span><b>${fmt(faturaAberta)}${c.limit?` / ${fmt(c.limit)}`:''}</b></div>`;
+      return `<div class="row"><span>${c.name}</span><b>${isSaldoHidden() ? '••••••' : `${fmt(faturaAberta)}${c.limit?` / ${fmt(c.limit)}`:''}`}</b></div>`;
     }).join('')}
-  </div>
-  <div class="card">
-    <h3>Caixinhas e empréstimo</h3>
-    <div class="muted">Valores ocultos aqui de propósito — veja detalhes nas abas próprias.</div>
-    <div class="row"><span>Caixinhas ativas</span><b>${state.boxes.length} 🔒</b></div>
-    <div class="row"><span>Empréstimo em aberto</span><b>${state.loan.installmentsCount-state.loan.paidCount} parcelas 🔒</b></div>
-  </div>
-  <div class="card">
-    <h3>Dívidas</h3>
-    <div class="row"><span>Total em aberto</span><b style="color:var(--red)">${fmt(dividasTotal())}</b></div>
   </div>
   <div class="card">
     <h3>Compromissos futuros (30 dias)</h3>
     ${compromissos.length? compromissos.map(c=>`<div class="row"><span>${c.desc} <span class="muted">(${fmtDate(c.date)})</span></span><b style="color:${c.type==='entrada'?'var(--green)':'var(--ink)'}">${c.type==='entrada'?'+':''}${fmt(c.amount)}</b></div>`).join(''):'<div class="emptyState">Nenhum compromisso nos próximos 30 dias</div>'}
-  </div>
-  <div class="card">
-    <h3>Movimentações recentes</h3>
-    ${state.movements.slice(0,10).length? state.movements.slice(0,10).map(m=>`
-      <div class="row"><span>${m.type==='credito'?'🟢':'🔴'} ${m.desc}<br><span class="muted">${new Date(m.ts).toLocaleString('pt-BR')}</span></span>
-      <b style="color:${m.type==='credito'?'var(--green)':'var(--red)'}">${m.type==='credito'?'+':'-'} ${fmt(m.amount)}</b></div>
-    `).join(''):'<div class="emptyState">Nenhuma movimentação registrada ainda</div>'}
   </div>
   <div class="card">
     <h3>Para onde foi o dinheiro (este mês)</h3>
@@ -1384,7 +1367,7 @@ function handleWhatsAppPrevistoRequest(text){
     : (type==='saida' ? 'Saídas realizadas' : 'Entradas realizadas');
   const linhas = items.map(l=>`- ${l.desc||'(sem descrição)'} (${l.category}) — ${fmt(l.amount)} — ${l.date.split('-').reverse().join('/')}`).join('\n');
   const texto = `*${tipoLabel} — ${periodoLabel}*\n\n${linhas || '(nada encontrado)'}\n\n*Total: ${fmt(total)}*`;
-  const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink)">${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   window._lastWhatsPrevisto = texto;
   openSheet(`${tipoLabel} — ${periodoLabel}`, `
     <div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}
@@ -1397,6 +1380,35 @@ function enviarPrevistoWhatsApp(){
   window.open(`https://wa.me/?text=${encodeURIComponent(window._lastWhatsPrevisto)}`, '_blank');
 }
 function answerVoiceQuery(text){
+  if(/\b(bom dia|boa tarde|boa noite)\b/.test(text) || /^(oi|ol[aá])( didi)?[\s!.]*$/.test(text.trim())){
+    const hour = new Date().getHours();
+    const saud = hour<12 ? 'Bom dia' : hour<18 ? 'Boa tarde' : 'Boa noite';
+    toast(`Didi: ${saud}! Como posso ajudar?`);
+    falarComoAle(`Didi: ${saud}! Como posso ajudar?`);
+    return;
+  }
+  if(/dica do dia|me d[eê] uma dica|alguma dica/.test(text)){
+    const DICAS_DO_DIA = [
+      'Antes de comprar algo por impulso, espere 24 horas — se ainda quiser, compre.',
+      'Revise suas assinaturas de vez em quando — é fácil esquecer o que ainda usa.',
+      'Separe uma reserva de emergência antes de pensar em investir.',
+      'Pequenos gastos diários somam mais do que parecem no fim do mês.',
+      'Pague as dívidas com juros mais altos primeiro.',
+      'Anote os gastos na hora — é mais fácil esquecer do que parece.',
+      'Compare preços antes de parcelar uma compra grande.',
+      'Um orçamento simples que você segue vale mais que um perfeito que você abandona.',
+      'Revise metas de categoria todo mês — seus gastos mudam com o tempo.',
+      'Antes de usar a reserva de emergência, pense: isso é realmente uma emergência?'
+    ];
+    const dica = DICAS_DO_DIA[new Date().getDate() % DICAS_DO_DIA.length];
+    openSheet('💡 Dica do dia', `<div style="font-size:15px;line-height:1.6">${dica}</div>`);
+    falarComoAle(`Didi: ${dica}`);
+    return;
+  }
+  if(/previs[ãa]o do tempo|que tempo faz|vai chover|temperatura (hoje|agora)|tempo hoje/.test(text)){
+    buscarPrevisaoTempo();
+    return;
+  }
   const hasEnviarWord = /enviar|mandar|compartilh/.test(text);
   const hasDespesaWord = /despes|gasto|previs|pagamento|recebimento/.test(text);
   const wantsWhatsShare = hasEnviarWord && hasDespesaWord;
@@ -1454,7 +1466,7 @@ function answerVoiceQuery(text){
   let label = categoria ? `${base} — ${categoria} — ${mesLabel}` : `${base} de ${mesLabel}`;
   if(person) label += ` — ${person.charAt(0).toUpperCase()+person.slice(1)}`;
   if(freeTerm) label += ` — "${freeTerm}"`;
-  const listHtml = items.length ? items.map(l=>`<div class="row"><span>${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b>${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink)">${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
   falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
 }
@@ -1513,13 +1525,14 @@ function startVoiceLanc(){
     const finalType = inferred ? inferred.type : parsed.type;
     const typeEl = document.getElementById('f_type_es');
     if(finalType && typeEl){ typeEl.value = finalType; onLancTypeChange(); }
-    if(parsed.desc){
+    if(parsed.desc || inferred){
       const d = document.getElementById('f_desc');
-      if(d){ d.value = parsed.desc; }
+      const catEl = document.getElementById('f_cat');
       if(inferred && inferred.category){
-        const catEl = document.getElementById('f_cat');
+        if(d) d.value = inferred.category;
         if(catEl && [...catEl.options].some(o=>o.value===inferred.category)) catEl.value = inferred.category;
       } else {
+        if(d) d.value = parsed.desc;
         suggestCategory();
       }
     }
@@ -1542,6 +1555,29 @@ function startVoiceLanc(){
     setTimeout(()=>{ statusEl.style.display='none'; }, 5000);
   };
   rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
+}
+function weatherCodeToText(code){
+  const map = {0:'céu limpo',1:'poucas nuvens',2:'parcialmente nublado',3:'nublado',45:'neblina',48:'neblina',51:'garoa fraca',53:'garoa',55:'garoa forte',61:'chuva fraca',63:'chuva',65:'chuva forte',71:'neve fraca',73:'neve',75:'neve forte',80:'pancadas de chuva',81:'pancadas de chuva',82:'pancadas fortes',95:'trovoadas',96:'trovoadas com granizo',99:'trovoadas fortes'};
+  return map[code] || 'tempo variável';
+}
+function buscarPrevisaoTempo(){
+  toast('Didi: buscando a previsão do tempo...');
+  if(!navigator.geolocation){ toast('Geolocalização não disponível neste navegador'); return; }
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    try{
+      const {latitude, longitude} = pos.coords;
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`);
+      const data = await res.json();
+      const tempAtual = Math.round(data.current.temperature_2m);
+      const max = Math.round(data.daily.temperature_2m_max[0]);
+      const min = Math.round(data.daily.temperature_2m_min[0]);
+      const chuva = data.daily.precipitation_probability_max[0];
+      const desc = weatherCodeToText(data.current.weather_code);
+      const texto = `Agora está ${tempAtual}°, ${desc}. Hoje: mínima de ${min}° e máxima de ${max}°, com ${chuva}% de chance de chuva.`;
+      openSheet('🌤️ Previsão do tempo', `<div style="font-size:15px;line-height:1.6">${texto}</div>`);
+      falarComoAle(`Didi: ${texto}`);
+    }catch(e){ toast('Não consegui buscar a previsão do tempo agora'); }
+  }, ()=>{ toast('Preciso da sua localização pra ver o tempo — permita o acesso e tente de novo'); }, {timeout:10000});
 }
 function inferTypeFromDesc(desc){
   if(!desc) return null;
