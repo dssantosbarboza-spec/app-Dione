@@ -1117,7 +1117,7 @@ function renderSituacao(){
   </div>
   <div class="card">
     <h3>Compromissos futuros (30 dias)</h3>
-    ${compromissos.length? compromissos.map(c=>`<div class="row"><span>${c.desc} <span class="muted">(${fmtDate(c.date)})</span></span><b style="color:${c.type==='entrada'?'var(--green)':'var(--ink)'}">${c.type==='entrada'?'+':''}${fmt(c.amount)}</b></div>`).join(''):'<div class="emptyState">Nenhum compromisso nos próximos 30 dias</div>'}
+    ${compromissos.length? compromissos.map(c=>`<div class="row"><span>${c.desc} <span class="muted">(${fmtDate(c.date)})</span></span><b style="color:${c.type==='entrada'?'var(--green)':'var(--ink)'}">${isSaldoHidden() ? '••••••' : `${c.type==='entrada'?'+':''}${fmt(c.amount)}`}</b></div>`).join(''):'<div class="emptyState">Nenhum compromisso nos próximos 30 dias</div>'}
   </div>
   <div class="card">
     <h3>Para onde foi o dinheiro (este mês)</h3>
@@ -1151,7 +1151,7 @@ function renderCategoryDonutHTML(){
     <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:9px">
       <div style="width:9px;height:9px;border-radius:3px;flex-shrink:0;background:${colors[i%colors.length]}"></div>
       <span style="flex:1;color:var(--ink-soft)">${cat}</span>
-      <b style="font-family:'Fraunces',serif">${fmt(val)}</b>
+      <b style="font-family:'Fraunces',serif">${isSaldoHidden() ? '••••' : fmt(val)}</b>
     </div>`).join('');
   return `<div style="display:flex;gap:18px;align-items:center">
     <svg width="92" height="92" viewBox="0 0 42 42" style="flex-shrink:0;transform:rotate(0deg)">
