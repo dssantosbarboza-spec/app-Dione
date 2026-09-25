@@ -25,6 +25,7 @@ body.dark{
 --line:rgba(244,241,232,0.09);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+@keyframes blinkAlert{0%,100%{opacity:1}50%{opacity:0.45}}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Manrope',sans-serif;height:100%;}
 h1,h2,h3,.num,.big{font-family:'Fraunces',serif;font-weight:600;}
 button{font-family:inherit;cursor:pointer;}
@@ -93,17 +94,17 @@ main{flex:1;overflow-y:auto;padding:12px 10px 80px;}
 .fab{position:fixed;right:18px;bottom:22px;width:54px;height:54px;border-radius:50%;background:var(--gold);color:#3a2b06;border:none;font-size:26px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:60;}
 .fabDidi{position:fixed;right:18px;bottom:86px;width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;border:2px solid var(--gold);font-size:20px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:60;display:flex;align-items:center;justify-content:center;}
 label.f{display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px;font-weight:600;}
-input.f,select.f,textarea.f{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);font-size:14px;background:#fff;}
+input.f,select.f,textarea.f{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);font-size:14px;background:var(--panel);color:var(--ink);}
 .formSheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;}
 .formSheet.show{display:flex;}
-.sheetBody{background:#fff;width:100%;max-width:480px;border-radius:20px 20px 0 0;max-height:88vh;overflow-y:auto;padding:18px 18px 24px;}
+.sheetBody{background:var(--panel);color:var(--ink);width:100%;max-width:480px;border-radius:20px 20px 0 0;max-height:88vh;overflow-y:auto;padding:18px 18px 24px;}
 .sheetHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .sheetHead h3{margin:0;font-size:16px;}
 .sheetHead .x{background:none;border:none;font-size:20px;color:var(--ink-soft);}
 .muted{color:var(--ink-soft);font-size:12.5px;}
 .emptyState{text-align:center;padding:30px 10px;color:var(--ink-soft);font-size:13px;}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;}
-.tabs button{flex:none;padding:8px 13px;border-radius:20px;border:1px solid var(--line);background:#fff;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+.tabs button{flex:none;padding:8px 13px;border-radius:20px;border:1px solid var(--line);background:var(--panel);font-size:12.5px;font-weight:600;color:var(--ink-soft);}
 .tabs button.active{background:var(--teal);color:#fff;border-color:var(--teal);}
 .gaugeWrap{margin-top:6px;}
 .gaugeTrack{height:14px;background:#EDEAE0;border-radius:10px;overflow:hidden;position:relative;}
@@ -114,7 +115,7 @@ input.f,select.f,textarea.f{width:100%;padding:11px;border-radius:10px;border:1p
 .progressFill{height:100%;background:var(--gold);}
 .calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;}
 .calGrid .dh{font-size:10px;color:var(--ink-soft);font-weight:700;padding-bottom:4px;}
-.calDay{aspect-ratio:1;border-radius:8px;background:#fff;border:1px solid var(--line);font-size:11.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
+.calDay{aspect-ratio:1;border-radius:8px;background:var(--panel);color:var(--ink);border:1px solid var(--line);font-size:11.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
 .calDay.today{border-color:var(--gold);border-width:2px;}
 .calDay .dots{display:flex;gap:2px;position:absolute;bottom:4px;}
 .dot{width:5px;height:5px;border-radius:50%;}
@@ -453,7 +454,7 @@ async function unlockWithBiometric(retryCount){
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     applyAutoDarkMode();
-    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); checkRevisaoAssinaturas(); checkCompromissosEsquecidos(); checkAssinaturaSubiuPreco(); handleQuickAction();
+    runAuto(); render(); checkBackupReminder(); checkDueAlerts(); checkSpendingAnomaly(); checkFechamentoReminder(); checkResumoDiario(); checkRevisaoAssinaturas(); checkCompromissosEsquecidos(); checkAssinaturaSubiuPreco(); checkContasVencendo(); handleQuickAction();
   }catch(e){
     clearTimeout(timeoutGuard);
     const isTransient = e && e.name === 'OperationError';
@@ -486,6 +487,59 @@ function fireNotify(title, body){
   toast(`🔔 ${title}: ${body}`);
 }
 let _dueAlertedToday = null;
+/* ================= ALERTA PISCANDO + SOM (contas a vencer) ================= */
+let _contasVencendoCheckedToday = null;
+function playAlertSound(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (delay)=>{
+      setTimeout(()=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.18);
+      }, delay);
+    };
+    beep(0); beep(280);
+  }catch(e){}
+}
+function checkContasVencendo(){
+  const today = todayStr();
+  if(_contasVencendoCheckedToday===today) return;
+  _contasVencendoCheckedToday = today;
+  if(localStorage.getItem('dioneContasVencendoShown')===today) return;
+  const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate()+1);
+  const tomorrowStr = tomorrowDate.toISOString().slice(0,10);
+  const pendentes = state.lancamentos.filter(l=>!l.trashed && !l.applied && l.type==='saida' && (l.date===today || l.date===tomorrowStr));
+  if(!pendentes.length) return;
+  localStorage.setItem('dioneContasVencendoShown', today);
+  const nomesHoje = pendentes.filter(l=>l.date===today).map(l=>l.desc||l.category);
+  const nomesAmanha = pendentes.filter(l=>l.date===tomorrowStr).map(l=>l.desc||l.category);
+  showContasVencendoBanner(nomesHoje, nomesAmanha);
+  playAlertSound();
+  let falado = `Didi: ${USER_NAME}, `;
+  if(nomesAmanha.length) falado += `contas a pagar com vencimento pra amanhã. `;
+  if(nomesHoje.length) falado += `${nomesAmanha.length?'E também tem':'Tem'} contas vencendo hoje. `;
+  falado += `Favor verificar.`;
+  setTimeout(()=>falarComoAle(falado), 400);
+}
+function showContasVencendoBanner(nomesHoje, nomesAmanha){
+  const old = document.getElementById('contasVencendoBanner');
+  if(old) old.remove();
+  const partes = [];
+  if(nomesAmanha.length) partes.push(`Amanhã: ${nomesAmanha.slice(0,4).join(', ')}${nomesAmanha.length>4?'...':''}`);
+  if(nomesHoje.length) partes.push(`Hoje: ${nomesHoje.slice(0,4).join(', ')}${nomesHoje.length>4?'...':''}`);
+  const banner = document.createElement('div');
+  banner.id = 'contasVencendoBanner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:200;background:var(--red);color:#fff;padding:12px 16px;font-size:12.5px;font-weight:700;text-align:center;animation:blinkAlert 1s infinite;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)';
+  banner.innerHTML = `⚠️ Contas a vencer, ${USER_NAME}! ${partes.join(' • ')} — toque pra ver`;
+  banner.onclick = ()=>{ banner.remove(); goTab('previsao'); };
+  document.body.appendChild(banner);
+  setTimeout(()=>{ const b = document.getElementById('contasVencendoBanner'); if(b) b.remove(); }, 20000);
+}
 function checkDueAlerts(){
   const today = todayStr();
   if(_dueAlertedToday===today) return;
@@ -699,6 +753,7 @@ async function tryUnlock(){
     checkRevisaoAssinaturas();
     checkCompromissosEsquecidos();
     checkAssinaturaSubiuPreco();
+    checkContasVencendo();
     handleQuickAction();
   } catch(e){
     errEl.textContent = "Senha incorreta";
@@ -1303,6 +1358,23 @@ function startVoiceQuery(){
   };
   rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); };
 }
+let _cachedVoices = [];
+function loadVoicesCache(){
+  _cachedVoices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+}
+if("speechSynthesis" in window){
+  loadVoicesCache();
+  window.speechSynthesis.onvoiceschanged = loadVoicesCache;
+}
+function melhorVozPtBR(){
+  const vozes = _cachedVoices.length ? _cachedVoices : (window.speechSynthesis ? window.speechSynthesis.getVoices() : []);
+  const ptVozes = vozes.filter(v=>v.lang && v.lang.toLowerCase().startsWith('pt'));
+  return ptVozes.find(v=>/google/i.test(v.name) && !v.localService)
+      || ptVozes.find(v=>!v.localService)
+      || ptVozes.find(v=>v.lang.toLowerCase()==='pt-br')
+      || ptVozes[0]
+      || null;
+}
 function falarComoAle(texto){
   if("speechSynthesis" in window){
     try{
@@ -1310,7 +1382,9 @@ function falarComoAle(texto){
       const utter = new SpeechSynthesisUtterance(texto);
       utter.lang = 'pt-BR';
       utter.rate = 1;
-      utter.onend = ()=>{};
+      utter.pitch = 1;
+      const voz = melhorVozPtBR();
+      if(voz) utter.voice = voz;
       window.speechSynthesis.speak(utter);
     }catch(e){}
   }
@@ -1367,7 +1441,7 @@ function handleWhatsAppPrevistoRequest(text){
     : (type==='saida' ? 'Saídas realizadas' : 'Entradas realizadas');
   const linhas = items.map(l=>`- ${l.desc||'(sem descrição)'} (${l.category}) — ${fmt(l.amount)} — ${l.date.split('-').reverse().join('/')}`).join('\n');
   const texto = `*${tipoLabel} — ${periodoLabel}*\n\n${linhas || '(nada encontrado)'}\n\n*Total: ${fmt(total)}*`;
-  const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink)">${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink);font-weight:700">${l.desc||'(sem descrição)'} <span class="muted">(${l.category} — ${l.date.split('-').reverse().join('/')})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   window._lastWhatsPrevisto = texto;
   openSheet(`${tipoLabel} — ${periodoLabel}`, `
     <div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}
@@ -1379,12 +1453,17 @@ function enviarPrevistoWhatsApp(){
   if(!window._lastWhatsPrevisto){ toast('Gere a lista primeiro'); return; }
   window.open(`https://wa.me/?text=${encodeURIComponent(window._lastWhatsPrevisto)}`, '_blank');
 }
+const USER_NAME = 'Jhony';
 function answerVoiceQuery(text){
   if(/\b(bom dia|boa tarde|boa noite)\b/.test(text) || /^(oi|ol[aá])( didi)?[\s!.]*$/.test(text.trim())){
     const hour = new Date().getHours();
     const saud = hour<12 ? 'Bom dia' : hour<18 ? 'Boa tarde' : 'Boa noite';
-    toast(`Didi: ${saud}! Como posso ajudar?`);
-    falarComoAle(`Didi: ${saud}! Como posso ajudar?`);
+    toast(`Didi: ${saud}, ${USER_NAME}! Como posso ajudar?`);
+    falarComoAle(`Didi: ${saud}, ${USER_NAME}! Como posso ajudar?`);
+    return;
+  }
+  if(/o que voc[eê] faz|quais.*(fun[çc][õo]es|coisas voc[eê])|me explica o app|explica o app|como voc[eê] funciona|o que (voc[eê] )?sabe fazer/.test(text)){
+    explicarApp();
     return;
   }
   if(/dica do dia|me d[eê] uma dica|alguma dica/.test(text)){
@@ -1402,7 +1481,7 @@ function answerVoiceQuery(text){
     ];
     const dica = DICAS_DO_DIA[new Date().getDate() % DICAS_DO_DIA.length];
     openSheet('💡 Dica do dia', `<div style="font-size:15px;line-height:1.6">${dica}</div>`);
-    falarComoAle(`Didi: ${dica}`);
+    falarComoAle(`Didi: ${USER_NAME}, aqui vai a dica de hoje: ${dica}`);
     return;
   }
   if(/previs[ãa]o do tempo|que tempo faz|vai chover|temperatura (hoje|agora)|tempo hoje/.test(text)){
@@ -1466,7 +1545,7 @@ function answerVoiceQuery(text){
   let label = categoria ? `${base} — ${categoria} — ${mesLabel}` : `${base} de ${mesLabel}`;
   if(person) label += ` — ${person.charAt(0).toUpperCase()+person.slice(1)}`;
   if(freeTerm) label += ` — "${freeTerm}"`;
-  const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink)">${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
+  const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink);font-weight:700">${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
   falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
 }
@@ -1556,6 +1635,26 @@ function startVoiceLanc(){
   };
   rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
 }
+function explicarApp(){
+  const texto = `
+    <div style="font-size:14px;line-height:1.7">
+    <b>App Pessoal Dione</b> é seu app financeiro pessoal. Aqui vai um resumo do que dá pra fazer:<br><br>
+    <b>📊 Minha situação</b> — visão geral: saldo, termômetro financeiro, reserva de emergência, patrimônio e pra onde foi seu dinheiro.<br><br>
+    <b>🔄 Entradas e Saídas</b> — lance receitas e despesas, à vista ou parceladas, previstas ou já realizadas. Dá pra preencher por voz ou foto (OCR/código de barras/QR de boleto e Pix).<br><br>
+    <b>💳 Cartões</b> — controle de fatura, limite e vencimento de cada cartão.<br><br>
+    <b>📉 Empréstimo e Dívidas</b> — acompanhamento de parcelas e tempo estimado pra quitar tudo.<br><br>
+    <b>🐷 Caixinhas</b> — suas reservas/metas de poupança.<br><br>
+    <b>🧮 Previsão e 🔮 Projeção</b> — o que vem por aí nos próximos meses.<br><br>
+    <b>📅 Calendário</b> e <b>🕘 Histórico</b> — tudo organizado por data, com busca e desfazer.<br><br>
+    <b>📊 Relatórios</b> — gráficos, metas por categoria, comparativo com o ano passado, simulador "e se", regra 50/30/20.<br><br>
+    <b>📁 Fechamento mensal e anual</b> — resumo pra enviar por e-mail, WhatsApp ou PDF.<br><br>
+    <b>Eu, a Didi</b> — você fala comigo pra lançar coisas, perguntar saldo, saídas, entradas, mandar por WhatsApp, saber a previsão do tempo, pedir uma dica do dia, ou só dar um "bom dia".<br><br>
+    <b>🔒 Segurança</b> — seus dados ficam criptografados no celular, com senha e opção de digital. Tem também uma senha só de visualização, caso queira que outra pessoa veja sem poder editar.<br><br>
+    Pode perguntar sobre qualquer uma dessas partes que eu tento explicar melhor!
+    </div>`;
+  openSheet('🤖 O que eu sei fazer', texto);
+  falarComoAle(`Didi: ${USER_NAME}, eu sou a Didi, sua assistente do App Pessoal Dione. Posso ajudar a lançar entradas e saídas, ver saldo, mandar relatórios por WhatsApp, contar a previsão do tempo e muito mais. Dá uma olhada na tela pra ver tudo com mais detalhe.`);
+}
 function weatherCodeToText(code){
   const map = {0:'céu limpo',1:'poucas nuvens',2:'parcialmente nublado',3:'nublado',45:'neblina',48:'neblina',51:'garoa fraca',53:'garoa',55:'garoa forte',61:'chuva fraca',63:'chuva',65:'chuva forte',71:'neve fraca',73:'neve',75:'neve forte',80:'pancadas de chuva',81:'pancadas de chuva',82:'pancadas fortes',95:'trovoadas',96:'trovoadas com granizo',99:'trovoadas fortes'};
   return map[code] || 'tempo variável';
@@ -1573,7 +1672,7 @@ function buscarPrevisaoTempo(){
       const min = Math.round(data.daily.temperature_2m_min[0]);
       const chuva = data.daily.precipitation_probability_max[0];
       const desc = weatherCodeToText(data.current.weather_code);
-      const texto = `Agora está ${tempAtual}°, ${desc}. Hoje: mínima de ${min}° e máxima de ${max}°, com ${chuva}% de chance de chuva.`;
+      const texto = `${USER_NAME}, agora está ${tempAtual}°, ${desc}. Hoje: mínima de ${min}° e máxima de ${max}°, com ${chuva}% de chance de chuva.`;
       openSheet('🌤️ Previsão do tempo', `<div style="font-size:15px;line-height:1.6">${texto}</div>`);
       falarComoAle(`Didi: ${texto}`);
     }catch(e){ toast('Não consegui buscar a previsão do tempo agora'); }
