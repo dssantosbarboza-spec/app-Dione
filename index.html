@@ -520,7 +520,7 @@ function checkContasVencendo(){
   const nomesAmanha = pendentes.filter(l=>l.date===tomorrowStr).map(l=>l.desc||l.category);
   showContasVencendoBanner(nomesHoje, nomesAmanha);
   playAlertSound();
-  let falado = `Didi: ${USER_NAME}, `;
+  let falado = `${USER_NAME}, `;
   if(nomesAmanha.length) falado += `contas a pagar com vencimento pra amanhã. `;
   if(nomesHoje.length) falado += `${nomesAmanha.length?'E também tem':'Tem'} contas vencendo hoje. `;
   falado += `Favor verificar.`;
@@ -606,7 +606,7 @@ function checkResumoDiario(){
   const gasto = hoje.filter(l=>l.type==='saida').reduce((s,l)=>s+Number(l.amount||0),0);
   const recebido = hoje.filter(l=>l.type==='entrada').reduce((s,l)=>s+Number(l.amount||0),0);
   if(!hoje.length) return;
-  let texto = `Didi: resumo do dia. `;
+  let texto = `Resumo do dia. `;
   if(gasto>0) texto += `Você gastou ${fmt(gasto)} hoje. `;
   if(recebido>0) texto += `Recebeu ${fmt(recebido)} hoje. `;
   texto += `Seu saldo atual é ${fmt(state.saldo)}.`;
@@ -1447,7 +1447,7 @@ function handleWhatsAppPrevistoRequest(text){
     <div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}
     <button class="btn block outline" style="margin-top:14px" onclick="enviarPrevistoWhatsApp()">📤 Enviar por WhatsApp</button>
   `);
-  falarComoAle(`Didi: preparei a lista de ${tipoLabel.toLowerCase()}, ${periodoLabel}. Total de ${fmt(total)}. Pode enviar por WhatsApp na tela.`);
+  falarComoAle(`preparei a lista de ${tipoLabel.toLowerCase()}, ${periodoLabel}. Total de ${fmt(total)}. Pode enviar por WhatsApp na tela.`);
 }
 function enviarPrevistoWhatsApp(){
   if(!window._lastWhatsPrevisto){ toast('Gere a lista primeiro'); return; }
@@ -1458,8 +1458,8 @@ function answerVoiceQuery(text){
   if(/\b(bom dia|boa tarde|boa noite)\b/.test(text) || /^(oi|ol[aá])( didi)?[\s!.]*$/.test(text.trim())){
     const hour = new Date().getHours();
     const saud = hour<12 ? 'Bom dia' : hour<18 ? 'Boa tarde' : 'Boa noite';
-    toast(`Didi: ${saud}, ${USER_NAME}! Como posso ajudar?`);
-    falarComoAle(`Didi: ${saud}, ${USER_NAME}! Como posso ajudar?`);
+    toast(`${saud}, ${USER_NAME}! Como posso ajudar?`);
+    falarComoAle(`${saud}, ${USER_NAME}! Como posso ajudar?`);
     return;
   }
   if(/o que voc[eê] faz|quais.*(fun[çc][õo]es|coisas voc[eê])|me explica o app|explica o app|como voc[eê] funciona|o que (voc[eê] )?sabe fazer/.test(text)){
@@ -1481,7 +1481,7 @@ function answerVoiceQuery(text){
     ];
     const dica = DICAS_DO_DIA[new Date().getDate() % DICAS_DO_DIA.length];
     openSheet('💡 Dica do dia', `<div style="font-size:15px;line-height:1.6">${dica}</div>`);
-    falarComoAle(`Didi: ${USER_NAME}, aqui vai a dica de hoje: ${dica}`);
+    falarComoAle(`${USER_NAME}, aqui vai a dica de hoje: ${dica}`);
     return;
   }
   if(/previs[ãa]o do tempo|que tempo faz|vai chover|temperatura (hoje|agora)|tempo hoje/.test(text)){
@@ -1494,7 +1494,7 @@ function answerVoiceQuery(text){
   if(wantsWhatsShare){ handleWhatsAppPrevistoRequest(text); return; }
   if(/apag|exclu|remov|delet/.test(text) && /ultim/.test(text)){
     undoLast();
-    falarComoAle('Didi: último lançamento desfeito.');
+    falarComoAle(`${USER_NAME}, último lançamento desfeito.`);
     return;
   }
   const actionWords = ['dar','da ','de entrada','de saída','de saida','quero','vou','anotar','anota','lançar','lancar','lançamento','lancamento','registrar','cadastrar','nova','novo','colocar','coloca','inserir','abrir','adicionar'];
@@ -1514,7 +1514,7 @@ function answerVoiceQuery(text){
   const wantsSaldo = /quanto.*(tenho|tem|sobrou)|saldo|meu saldo|quanto.*disponível|quanto.*disponivel/.test(text);
   if(wantsSaldo){
     openSheet('Seu saldo', `<div class="row"><span><b>Saldo disponível</b></span><b style="font-size:18px">${fmt(state.saldo)}</b></div>`);
-    falarComoAle(`Didi: você tem ${fmt(state.saldo)} disponível agora.`);
+    falarComoAle(`você tem ${fmt(state.saldo)} disponível agora.`);
     return;
   }
   const monthFromSpeech = extractMonthFromText(text);
@@ -1547,7 +1547,7 @@ function answerVoiceQuery(text){
   if(freeTerm) label += ` — "${freeTerm}"`;
   const listHtml = items.length ? items.map(l=>`<div class="row"><span style="color:var(--ink);font-weight:700">${l.desc||'(sem descrição)'} <span class="muted">(${l.category}${l.date?' — '+l.date.split('-').reverse().join('/'):''})</span></span><b style="color:${type==='entrada'?'var(--green)':'var(--red)'}">${fmt(l.amount)}</b></div>`).join('') : '<div class="emptyState">Nada encontrado</div>';
   openSheet(label, `<div class="row"><span><b>Total</b></span><b style="font-size:18px">${fmt(total)}</b></div><hr class="sep">${listHtml}`);
-  falarComoAle(`Didi: ${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
+  falarComoAle(`${label}. ${items.length} itens, totalizando ${fmt(total)}.`);
 }
 
 /* ================= LANÇAMENTO POR VOZ ================= */
@@ -1569,8 +1569,18 @@ function parseVoiceLanc(text){
   let installments = null;
   if(/\bà vista\b|\ba vista\b/.test(lower)) installments = 1;
   else {
-    const parcMatch = lower.match(/parcelad[oa]?\s*(?:em)?\s*(\d{1,2})\s*x?|(\d{1,2})\s*vezes|(\d{1,2})x\b/);
-    if(parcMatch){ installments = parseInt(parcMatch[1]||parcMatch[2]||parcMatch[3],10); }
+    const parcMatch = lower.match(/parcelad[oa]?\s*(?:em)?\s*(\d{1,2})\s*x?|(\d{1,2})\s*vezes|(\d{1,2})\s*x\b/);
+    if(parcMatch){
+      installments = parseInt(parcMatch[1]||parcMatch[2]||parcMatch[3],10);
+    } else {
+      const NUM_WORDS = {duas:2,dois:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12};
+      const normLower = lower.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const wordMatch = normLower.match(/parcelad[oa]?\s*(?:em)?\s*(duas|dois|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)\s*(vezes|x)?|(duas|dois|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)\s*vezes/);
+      if(wordMatch){
+        const palavra = wordMatch[1] || wordMatch[3];
+        installments = NUM_WORDS[palavra] || null;
+      }
+    }
   }
   let desc = text;
   [...inWords, ...outWords].forEach(w=>{ desc = desc.replace(new RegExp(w,'ig'), ''); });
@@ -1579,6 +1589,7 @@ function parseVoiceLanc(text){
   desc = desc.replace(/reais|real|r\$|centavos|centavo/ig,'');
   desc = desc.replace(/à vista|a vista/ig,'');
   desc = desc.replace(/parcelad[oa]?\s*(em)?\s*\d{1,2}\s*x?/ig,'').replace(/\d{1,2}\s*vezes/ig,'').replace(/\d{1,2}x\b/ig,'');
+  desc = desc.replace(/parcelad[oa]?\s*(em)?\s*(duas|dois|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)\s*(vezes|x)?/ig,'').replace(/(duas|dois|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)\s*vezes/ig,'');
   desc = desc.replace(/\brealizad[oa]\b|\bprevist[oa]\b/ig,'');
   desc = desc.replace(/\s+/g,' ').trim();
   desc = desc.replace(/^(de|do|da|no|na|em|com)\s+/i,'').trim();
@@ -1653,14 +1664,14 @@ function explicarApp(){
     Pode perguntar sobre qualquer uma dessas partes que eu tento explicar melhor!
     </div>`;
   openSheet('🤖 O que eu sei fazer', texto);
-  falarComoAle(`Didi: ${USER_NAME}, eu sou a Didi, sua assistente do App Pessoal Dione. Posso ajudar a lançar entradas e saídas, ver saldo, mandar relatórios por WhatsApp, contar a previsão do tempo e muito mais. Dá uma olhada na tela pra ver tudo com mais detalhe.`);
+  falarComoAle(`${USER_NAME}, eu sou a Didi, sua assistente do App Pessoal Dione. Posso ajudar a lançar entradas e saídas, ver saldo, mandar relatórios por WhatsApp, contar a previsão do tempo e muito mais. Dá uma olhada na tela pra ver tudo com mais detalhe.`);
 }
 function weatherCodeToText(code){
   const map = {0:'céu limpo',1:'poucas nuvens',2:'parcialmente nublado',3:'nublado',45:'neblina',48:'neblina',51:'garoa fraca',53:'garoa',55:'garoa forte',61:'chuva fraca',63:'chuva',65:'chuva forte',71:'neve fraca',73:'neve',75:'neve forte',80:'pancadas de chuva',81:'pancadas de chuva',82:'pancadas fortes',95:'trovoadas',96:'trovoadas com granizo',99:'trovoadas fortes'};
   return map[code] || 'tempo variável';
 }
 function buscarPrevisaoTempo(){
-  toast('Didi: buscando a previsão do tempo...');
+  toast('Buscando a previsão do tempo...');
   if(!navigator.geolocation){ toast('Geolocalização não disponível neste navegador'); return; }
   navigator.geolocation.getCurrentPosition(async (pos)=>{
     try{
@@ -1674,7 +1685,7 @@ function buscarPrevisaoTempo(){
       const desc = weatherCodeToText(data.current.weather_code);
       const texto = `${USER_NAME}, agora está ${tempAtual}°, ${desc}. Hoje: mínima de ${min}° e máxima de ${max}°, com ${chuva}% de chance de chuva.`;
       openSheet('🌤️ Previsão do tempo', `<div style="font-size:15px;line-height:1.6">${texto}</div>`);
-      falarComoAle(`Didi: ${texto}`);
+      falarComoAle(`${texto}`);
     }catch(e){ toast('Não consegui buscar a previsão do tempo agora'); }
   }, ()=>{ toast('Preciso da sua localização pra ver o tempo — permita o acesso e tente de novo'); }, {timeout:10000});
 }
