@@ -1343,18 +1343,162 @@ function onLancTypeChange(){
   updateParcPreview();
 }
 /* ================= CONSULTA POR VOZ (entradas/saídas do mês) ================= */
-function startVoiceQuery(){
-  toggleDrawer(false);
+/* ================= CONVERSA NATURAL DA DIDI ================= */
+let didiContext = { pending:null, partial:null, lastLancId:null };
+
+function falarEescutarDeNovo(texto){
+  toast(texto);
+  if("speechSynthesis" in window){
+    try{
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(texto);
+      utter.lang = 'pt-BR';
+      const voz = melhorVozPtBR();
+      if(voz) utter.voice = voz;
+      utter.onend = ()=>{ setTimeout(()=>startVoiceQuery(true), 250); };
+      utter.onerror = ()=>{ setTimeout(()=>startVoiceQuery(true), 250); };
+      window.speechSynthesis.speak(utter);
+    }catch(e){ setTimeout(()=>startVoiceQuery(true), 1200); }
+  } else {
+    setTimeout(()=>startVoiceQuery(true), 1600);
+  }
+}
+function registrarLancamentoDireto({type, amount, desc, category, date, status}){
+  snapshot();
+  const cat = category || (type==='saida' ? 'Outras despesas' : 'Outras entradas');
+  const rec = { id:uid('lc'), type, desc: desc||cat, category:cat, amount, date: date||todayStr(), purchaseDate: date||todayStr(), status: status||'realizado', installments:1, installmentNum:1, groupId:null, cardId:null, receipt:null, trashed:false, applied:false };
+  state.lancamentos.push(rec);
+  if(rec.status==='realizado') applyLancEffect(rec);
+  logHist(`Lançamento por conversa com a Didi: ${rec.desc} (${fmt(rec.amount)})`);
+  save();
+  render();
+  didiContext.lastLancId = rec.id;
+  return rec;
+}
+function corrigirDataUltimoLancamento(lower){
+  if(!didiContext.lastLancId) return false;
+  const rec = state.lancamentos.find(l=>l.id===didiContext.lastLancId);
+  if(!rec) return false;
+  const hoje = new Date();
+  let novaData = null, quando = '';
+  if(/anteontem/.test(lower)){ const d=new Date(hoje); d.setDate(d.getDate()-2); novaData=d.toISOString().slice(0,10); quando='anteontem'; }
+  else if(/ontem/.test(lower)){ const d=new Date(hoje); d.setDate(d.getDate()-1); novaData=d.toISOString().slice(0,10); quando='ontem'; }
+  else if(/hoje/.test(lower)){ novaData=todayStr(); quando='hoje'; }
+  if(!novaData) return false;
+  rec.date = novaData; rec.purchaseDate = novaData;
+  save(); render();
+  const texto = quando==='hoje' ? `Certo, mantido como hoje.` : `Ah, entendi. Corrigi para ${quando}.`;
+  toast(texto);
+  falarComoAle(texto);
+  return true;
+}
+function analisarGastosPorCategoria(){
+  didiContext.pending = null;
+  const ym = todayStr().slice(0,7);
+  const bycat = {};
+  activeLanc().filter(l=>l.applied && l.type==='saida' && l.date && l.date.slice(0,7)===ym).forEach(l=>{ bycat[l.category]=(bycat[l.category]||0)+Number(l.amount||0); });
+  const top = Object.entries(bycat).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([c])=>c);
+  didiContext.pending = 'confirmar_comparativo';
+  const texto = top.length
+    ? `Dei uma olhada. ${top.join(' e ')} estão puxando bastante seus gastos este mês. Quer que eu compare com o mês passado?`
+    : `Dei uma olhada, mas ainda não tem gasto suficiente esse mês pra apontar um vilão. Quer que eu compare o total com o mês passado mesmo assim?`;
+  falarEescutarDeNovo(texto);
+}
+function compararComMesPassado(){
+  didiContext.pending = null;
+  const hoje = todayStr();
+  const [y,m] = hoje.slice(0,7).split('-').map(Number);
+  let mm=m-1, yy=y; if(mm<=0){ mm=12; yy-=1; }
+  const ymAnterior = `${yy}-${String(mm).padStart(2,'0')}`;
+  const ymAtual = hoje.slice(0,7);
+  const totalAnterior = totalMesPorTipo(ymAnterior,'saida');
+  const totalAtual = totalMesPorTipo(ymAtual,'saida');
+  const diff = totalAtual - totalAnterior;
+  const texto = `No mês passado você gastou ${fmt(totalAnterior)}. Este mês já está em ${fmt(totalAtual)}. A diferença é de ${fmt(Math.abs(diff))} ${diff>=0?'a mais':'a menos'}.`;
+  openSheet('Comparativo de gastos', `<div style="font-size:15px;line-height:1.6">${texto}</div>`);
+  falarComoAle(texto);
+}
+function processarFalaDidi(text){
+  const lower = text.toLowerCase();
+
+  if(didiContext.pending==='descricao'){
+    const desc = text.trim();
+    const inferred = inferTypeFromDesc(desc);
+    const rec = registrarLancamentoDireto({
+      type: didiContext.partial.type,
+      amount: didiContext.partial.amount,
+      desc: inferred ? inferred.category : desc,
+      category: inferred ? inferred.category : null,
+      date: todayStr(), status: 'realizado'
+    });
+    didiContext.partial = null;
+    didiContext.pending = 'confirmar_dia';
+    falarEescutarDeNovo(`Beleza. Registrei ${fmt(rec.amount)}${rec.category?' em '+rec.category.toLowerCase():''}. Foi hoje?`);
+    return;
+  }
+  if(didiContext.pending==='confirmar_dia'){
+    didiContext.pending = null;
+    if(/ontem|anteontem/.test(lower)){ corrigirDataUltimoLancamento(lower); }
+    else if(/hoje|sim|isso|foi hoje|correto/.test(lower)){ toast('Certo, mantido como hoje.'); }
+    else { processarFalaDidi(text); return; }
+    return;
+  }
+  if(didiContext.pending==='confirmar_analise_gastos'){
+    didiContext.pending = null;
+    if(/quero|sim|pode|vai|manda|claro|isso/.test(lower)) analisarGastosPorCategoria();
+    else toast('Tudo bem.');
+    return;
+  }
+  if(didiContext.pending==='confirmar_comparativo'){
+    if(/quero|sim|pode|vai|manda|claro|isso/.test(lower)) compararComMesPassado();
+    else { didiContext.pending=null; toast('Tudo bem.'); }
+    return;
+  }
+  if(didiContext.lastLancId && /\b(foi\s*)?(ontem|anteontem|hoje)\b/.test(lower) && lower.trim().split(/\s+/).length<=4){
+    if(corrigirDataUltimoLancamento(lower)) return;
+  }
+  if(/t[oô] gastando (muito|demais)|gastei demais|gasto muito|acho que gastei muito/.test(lower)){
+    didiContext.pending = 'confirmar_analise_gastos';
+    falarEescutarDeNovo(`Pode ser. Quer que eu dê uma olhada nos seus gastos e veja onde está pesando mais?`);
+    return;
+  }
+
+  const parsedLc = parseVoiceLanc(text);
+  if(parsedLc.type && parsedLc.amount!=null){
+    const inferred = inferTypeFromDesc(parsedLc.desc);
+    const finalType = inferred ? inferred.type : parsedLc.type;
+    if(!parsedLc.desc || parsedLc.desc.trim().length<2){
+      didiContext.partial = { type: finalType, amount: parsedLc.amount };
+      didiContext.pending = 'descricao';
+      falarEescutarDeNovo(`Opa, ${fmt(parsedLc.amount)} em quê?`);
+      return;
+    } else {
+      const rec = registrarLancamentoDireto({
+        type: finalType, amount: parsedLc.amount,
+        desc: inferred ? inferred.category : parsedLc.desc,
+        category: inferred ? inferred.category : null,
+        date: todayStr(), status: parsedLc.status || 'realizado'
+      });
+      didiContext.pending = 'confirmar_dia';
+      falarEescutarDeNovo(`Beleza. Registrei ${fmt(rec.amount)}${rec.category?' em '+rec.category.toLowerCase():''}. Foi hoje?`);
+      return;
+    }
+  }
+  answerVoiceQuery(text);
+}
+
+function startVoiceQuery(auto){
+  if(!auto) toggleDrawer(false);
   const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!Rec){ toast('Reconhecimento de voz não é suportado neste navegador'); return; }
   const rec = new Rec();
   rec.lang = 'pt-BR'; rec.continuous = false; rec.interimResults = false;
-  toast('🎙️ Didi está ouvindo... pergunte, ex: "Didi, quanto eu tenho" ou "Didi, o que tem pra pagar esse mês"');
+  toast(auto ? '🎙️ Ouvindo sua resposta...' : '🎙️ Didi está ouvindo... pergunte, ex: "Didi, quanto eu tenho" ou "Didi, o que tem pra pagar esse mês"');
   try{ rec.start(); }catch(e){ toast('Não foi possível abrir o microfone.'); return; }
   rec.onresult = (e)=>{
     const heard = e.results[0][0].transcript.toLowerCase();
     toast(`🎙️ Ouvi: "${heard}"`);
-    setTimeout(()=>answerVoiceQuery(heard), 900);
+    setTimeout(()=>processarFalaDidi(heard), 900);
   };
   rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); };
 }
@@ -1461,6 +1605,10 @@ function answerVoiceQuery(text){
     toast(`${saud}, ${USER_NAME}! Como posso ajudar?`);
     falarComoAle(`${saud}, ${USER_NAME}! Como posso ajudar?`);
     return;
+  }
+  if(/explica|explique|me explica|o que [ée]|como funciona/.test(text)){
+    const topicoAchado = TOPICOS_EXPLICACAO.find(t=>t.match.test(text));
+    if(topicoAchado){ explicarTopico(topicoAchado); return; }
   }
   if(/o que voc[eê] faz|quais.*(fun[çc][õo]es|coisas voc[eê])|me explica o app|explica o app|como voc[eê] funciona|o que (voc[eê] )?sabe fazer/.test(text)){
     explicarApp();
@@ -1646,6 +1794,36 @@ function startVoiceLanc(){
   };
   rec.onerror = ()=>{ statusEl.textContent = 'Não entendi. Tente de novo ou digite manualmente.'; setTimeout(()=>{ statusEl.style.display='none'; }, 3000); };
 }
+const TOPICOS_EXPLICACAO = [
+  { chave:'situacao', match:/minha situa[çc][ãa]o|vis[ãa]o geral|termo?metro|reserva de emerg[êe]ncia/, titulo:'Minha situação',
+    texto:'É a tela inicial, com o resumo de tudo: seu saldo disponível, o termômetro financeiro (uma nota de 0 a 100 baseada em quanto sobra, sua reserva e dívidas), quantos meses sua reserva de emergência cobre, patrimônio total e o gráfico de pra onde foi seu dinheiro no mês.' },
+  { chave:'lancamentos', match:/entradas e sa[íi]das|lan[çc]amentos/, titulo:'Entradas e Saídas',
+    texto:'Aqui você registra tudo que entra e sai de dinheiro. Cada lançamento pode ser à vista ou parcelado, previsto (ainda não aconteceu) ou realizado (já aconteceu de verdade, mexendo no saldo). Dá pra preencher digitando, por voz, ou tirando foto do comprovante/boleto/QR code.' },
+  { chave:'cartoes', match:/cart[õo]es/, titulo:'Cartões',
+    texto:'Mostra a fatura de cada cartão, quanto já foi gasto, o limite e a data de vencimento. Compras no cartão entram automaticamente na fatura certa, mesmo parceladas.' },
+  { chave:'emprestimo', match:/empr[eé]stimo|d[íi]vidas/, titulo:'Empréstimo e Dívidas',
+    texto:'Acompanha as parcelas do seu empréstimo e as dívidas em aberto. Também mostra uma estimativa de quantos meses falta pra quitar tudo, baseado no seu ritmo médio de sobra.' },
+  { chave:'caixinhas', match:/caixinhas/, titulo:'Caixinhas',
+    texto:'São suas reservas e metas de poupança separadas do saldo principal — tipo a reserva de emergência ou uma meta específica.' },
+  { chave:'previsaoPagamentos', match:/previs[ãa]o de pagamentos/, titulo:'Previsão de pagamentos',
+    texto:'Lista tudo que está previsto pra pagar ou receber ainda, organizado por data, pra você se planejar.' },
+  { chave:'projecao', match:/proje[çc][ãa]o/, titulo:'Projeção do próximo mês',
+    texto:'Estima como vai ficar seu saldo nos próximos meses, com base na média do que costuma entrar e sair.' },
+  { chave:'historico', match:/hist[óo]rico/, titulo:'Histórico',
+    texto:'Registro completo de tudo que já foi feito no app, com busca, filtros e opção de desfazer ou corrigir lançamentos.' },
+  { chave:'calendario', match:/calend[áa]rio/, titulo:'Calendário',
+    texto:'Mostra num calendário visual os dias com vencimentos, recebimentos e compromissos.' },
+  { chave:'relatorios', match:/relat[óo]rios/, titulo:'Relatórios',
+    texto:'Reúne vários gráficos e análises: gastos por categoria, evolução do saldo e patrimônio, metas por categoria, comparativo com o ano passado, um simulador "e se" pra cortar gastos, e a regra 50/30/20.' },
+  { chave:'fechamento', match:/fechamento/, titulo:'Fechamento mensal',
+    texto:'Gera um resumo do mês (ou do ano inteiro) — tudo que entrou, saiu e por categoria — pronto pra enviar por e-mail, WhatsApp ou baixar em PDF.' },
+  { chave:'seguranca', match:/seguran[çc]a|senha|digital|criptografia/, titulo:'Segurança',
+    texto:'Seus dados ficam criptografados no celular, protegidos pela sua senha. Dá pra usar a digital também, e existe uma segunda senha só de visualização, caso queira que outra pessoa veja sem poder editar.' },
+];
+function explicarTopico(topico){
+  openSheet(topico.titulo, `<div style="font-size:15px;line-height:1.7"><b>${topico.titulo}</b><br><br>${topico.texto}</div>`);
+  falarComoAle(`${topico.titulo}. ${topico.texto}`);
+}
 function explicarApp(){
   const texto = `
     <div style="font-size:14px;line-height:1.7">
@@ -1661,10 +1839,10 @@ function explicarApp(){
     <b>📁 Fechamento mensal e anual</b> — resumo pra enviar por e-mail, WhatsApp ou PDF.<br><br>
     <b>Eu, a Didi</b> — você fala comigo pra lançar coisas, perguntar saldo, saídas, entradas, mandar por WhatsApp, saber a previsão do tempo, pedir uma dica do dia, ou só dar um "bom dia".<br><br>
     <b>🔒 Segurança</b> — seus dados ficam criptografados no celular, com senha e opção de digital. Tem também uma senha só de visualização, caso queira que outra pessoa veja sem poder editar.<br><br>
-    Pode perguntar sobre qualquer uma dessas partes que eu tento explicar melhor!
+    Quer saber mais sobre alguma parte? Fala <b>"Didi, explica relatórios"</b> ou <b>"Didi, o que é o termômetro financeiro"</b>, por exemplo — funciona com qualquer seção do app.
     </div>`;
   openSheet('🤖 O que eu sei fazer', texto);
-  falarComoAle(`${USER_NAME}, eu sou a Didi, sua assistente do App Pessoal Dione. Posso ajudar a lançar entradas e saídas, ver saldo, mandar relatórios por WhatsApp, contar a previsão do tempo e muito mais. Dá uma olhada na tela pra ver tudo com mais detalhe.`);
+  falarComoAle(`${USER_NAME}, eu sou a Didi, sua assistente do App Pessoal Dione. Se quiser saber mais sobre uma parte específica, é só falar, por exemplo, explica relatórios, ou explica cartões.`);
 }
 function weatherCodeToText(code){
   const map = {0:'céu limpo',1:'poucas nuvens',2:'parcialmente nublado',3:'nublado',45:'neblina',48:'neblina',51:'garoa fraca',53:'garoa',55:'garoa forte',61:'chuva fraca',63:'chuva',65:'chuva forte',71:'neve fraca',73:'neve',75:'neve forte',80:'pancadas de chuva',81:'pancadas de chuva',82:'pancadas fortes',95:'trovoadas',96:'trovoadas com granizo',99:'trovoadas fortes'};
