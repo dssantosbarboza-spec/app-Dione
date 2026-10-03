@@ -91,8 +91,27 @@ main{flex:1;overflow-y:auto;padding:12px 10px 80px;}
 .btn.small{padding:7px 10px;font-size:12.5px;}
 .btn.danger{background:var(--red);}
 .btn.block{width:100%;}
-.fab{position:fixed;right:18px;bottom:22px;width:54px;height:54px;border-radius:50%;background:var(--gold);color:#3a2b06;border:none;font-size:26px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:60;}
-.fabDidi{position:fixed;right:18px;bottom:86px;width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;border:2px solid var(--gold);font-size:20px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:60;display:flex;align-items:center;justify-content:center;}
+.fab{position:fixed;right:18px;bottom:78px;width:54px;height:54px;border-radius:50%;background:var(--gold);color:#3a2b06;border:none;font-size:26px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:60;}
+.fabDidi{position:fixed;right:18px;bottom:142px;width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;border:2px solid var(--gold);font-size:20px;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:60;display:flex;align-items:center;justify-content:center;}
+/* ===== MENU INFERIOR ===== */
+.bottomnav{display:flex;background:var(--panel);border-top:1px solid var(--line);padding:6px 2px calc(6px + env(safe-area-inset-bottom,0px));position:sticky;bottom:0;z-index:55;}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9.5px;color:var(--ink-soft);padding:5px 0;background:none;border:none;font-family:'Manrope',sans-serif;}
+.bnav-item.active{color:var(--gold);font-weight:700;}
+.bnav-ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.bnav-item.active .bnav-ic{background:var(--gold-soft);}
+/* ===== CHAT DA DIDI ===== */
+.iconBadge{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.chatBubble{max-width:80%;padding:10px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;margin-bottom:8px;white-space:pre-wrap;}
+.chatBubble.didi{background:var(--panel);border-top-left-radius:4px;align-self:flex-start;}
+.chatBubble.user{background:var(--teal);color:#fff;border-top-right-radius:4px;align-self:flex-end;}
+.chatRow{display:flex;flex-direction:column;padding:14px;gap:2px;overflow-y:auto;}
+.didiHeader{display:flex;align-items:center;gap:10px;padding:16px;background:linear-gradient(160deg,var(--teal) 0%, var(--teal-dark) 100%);color:#fff;margin:-14px -10px 0;border-radius:0 0 20px 20px;}
+.didiAvatar{width:38px;height:38px;border-radius:12px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:18px;color:#241a08;font-weight:700;flex-shrink:0;}
+.chatInputBar{display:flex;gap:8px;align-items:center;padding:10px 4px 4px;position:sticky;bottom:0;background:var(--bg);}
+.suggestChip{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:8px 13px;font-size:12px;margin:4px 6px 0 0;color:var(--ink);cursor:pointer;}
+/* ===== TELA MAIS ===== */
+.menuRow{display:flex;align-items:center;gap:12px;padding:14px 6px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer;background:none;border-left:none;border-right:none;border-top:none;width:100%;text-align:left;color:var(--ink);font-family:'Manrope',sans-serif;}
+.menuRow .mi{width:22px;text-align:center;flex-shrink:0;}
 label.f{display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px;font-weight:600;}
 input.f,select.f,textarea.f{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);font-size:14px;background:var(--panel);color:var(--ink);}
 .formSheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;}
@@ -150,37 +169,20 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
 
 <div id="app">
   <header class="top">
-    <button class="menuBtn" onclick="toggleDrawer(true)">☰</button>
+    <button class="menuBtn" onclick="goTab('mais')">☰</button>
     <div class="brandMark">D</div>
-    <div class="title"><b>App Pessoal Dione</b><span id="headerSub">Minha situação</span></div>
+    <div class="title"><b>App Pessoal Dione</b><span id="headerSub">Início</span></div>
     <button class="lockBtn" onclick="lockApp()">🔒</button>
   </header>
 
-  <div id="drawerOverlay" onclick="toggleDrawer(false)"></div>
-  <nav id="drawer">
-    <div class="drawerHead"><b>Menu</b></div>
-    <div id="navList"></div>
-    <div class="drawerFoot">
-      <button class="drawerAction" id="darkManualBtn" onclick="toggleDarkMode()">🌙 Alternar modo escuro</button>
-<button class="drawerAction" id="darkAutoBtn" onclick="toggleDarkAuto()">🌗 Modo escuro automático (à noite)</button>
-<button class="drawerAction" id="bioToggleBtn" onclick="toggleBiometric()">🔐 Ativar entrada por digital</button>
-<button class="drawerAction" id="notifToggleBtn" onclick="requestNotifPermission()">🔔 Ativar notificações de vencimento</button>
-<button class="drawerAction" onclick="startVoiceQuery()">🎤 Falar com a Didi</button>
-<button class="drawerAction" onclick="exportBackup()">⬇️ Exportar backup</button>
-<button class="drawerAction" onclick="compartilharBackup()">☁️ Compartilhar backup (Drive, etc)</button>
-<button class="drawerAction" onclick="exportCSV()">📊 Exportar CSV (Excel)</button>
-<button class="drawerAction" onclick="openConfiguracoes()">⚙️ Configurações</button>
-<button class="drawerAction" onclick="openImportarLote()">📥 Importar lançamentos colados</button>
-<button class="drawerAction" onclick="openUndoHistory()">🕐 Histórico de desfazer</button>
-      <button class="drawerAction" onclick="document.getElementById('importFile').click()">⬆️ Importar backup</button>
-      <button class="drawerAction" onclick="resetAllData()" style="color:#ffb3a7">🗑️ Apagar todos os dados</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
-    </div>
-  </nav>
+  <div id="drawerOverlay" style="display:none"></div>
+  <div id="navList" style="display:none"></div>
+  <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
 
   <main id="content"></main>
   <button class="fab" id="fabBtn" onclick="fabAction()">+</button>
   <button class="fabDidi" id="fabDidiBtn" onclick="startVoiceQuery()" title="Falar com a Didi">🎤</button>
+  <nav class="bottomnav" id="bottomNav"></nav>
 </div>
 
 <div class="formSheet" id="sheet">
@@ -792,7 +794,7 @@ document.getElementById('lockInput').addEventListener('keydown', e=>{ if(e.key==
 
 /* ================= NAV ================= */
 const NAV = [
-  {id:"situacao", label:"Minha situação", ic:"🏠"},
+  {id:"situacao", label:"Início", ic:"🏠"},
   {id:"lancamentos", label:"Entradas e Saídas", ic:"🔄"},
   {id:"cartoes", label:"Cartões", ic:"💳"},
   {id:"emprestimo", label:"Empréstimo e Dívidas", ic:"📉"},
@@ -803,18 +805,38 @@ const NAV = [
   {id:"calendario", label:"Calendário", ic:"📅"},
   {id:"relatorios", label:"Relatórios", ic:"📊"},
   {id:"fechamento", label:"Fechamento mensal", ic:"📁"},
+  {id:"didi", label:"Didi", ic:"🤖"},
+  {id:"mais", label:"Mais", ic:"☰"},
 ];
+const TAB_LABELS = Object.fromEntries(NAV.map(n=>[n.id, n.label]));
+const BOTTOM_NAV = [
+  {id:"situacao", label:"Início", ic:"🏠"},
+  {id:"historico", label:"Histórico", ic:"🕘"},
+  {id:"didi", label:"Didi", ic:"🤖"},
+  {id:"cartoes", label:"Cartões", ic:"💳"},
+  {id:"mais", label:"Mais", ic:"☰"},
+];
+function renderBottomNav(){
+  const el = document.getElementById('bottomNav');
+  if(!el) return;
+  el.innerHTML = BOTTOM_NAV.map(n=>
+    `<button class="bnav-item ${n.id===currentTab?'active':''}" onclick="goTab('${n.id}')"><span class="bnav-ic">${n.ic}</span>${n.label}</button>`
+  ).join('');
+}
 function buildNav(){
-  document.getElementById('navList').innerHTML = NAV.map(n=>
+  const el = document.getElementById('navList');
+  if(!el) return;
+  el.innerHTML = NAV.map(n=>
     `<div class="navItem ${n.id===currentTab?'active':''}" onclick="goTab('${n.id}')"><span class="ic">${n.ic}</span>${n.label}</div>`
   ).join("");
 }
 function toggleDrawer(open){
-  document.getElementById('drawer').classList.toggle('open', open);
-  document.getElementById('drawerOverlay').classList.toggle('show', open);
-  if(open) updateDarkModeButtons();
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('drawerOverlay');
+  if(drawer) drawer.classList.toggle('open', open);
+  if(overlay) overlay.classList.toggle('show', open);
 }
-function goTab(id){ currentTab=id; toggleDrawer(false); render(); }
+function goTab(id){ currentTab=id; render(); const c=document.getElementById('content'); if(c) c.scrollTop=0; }
 
 /* ================= HELPERS ================= */
 function cardById(id){ return state.cards.find(c=>c.id===id); }
@@ -1052,25 +1074,123 @@ function monthlyNetEstimate(){
 function render(){
   runAuto();
   buildNav();
-  document.getElementById('headerSub').textContent = NAV.find(n=>n.id===currentTab).label;
+  renderBottomNav();
+  document.getElementById('headerSub').textContent = TAB_LABELS[currentTab] || '';
   const c = document.getElementById('content');
   const renderers = {
     situacao: renderSituacao, lancamentos: renderLancamentos, cartoes: renderCartoes,
     emprestimo: renderEmprestimo, caixinhas: renderCaixinhas, previsao: renderPrevisao,
     projecao: renderProjecao, historico: renderHistorico, calendario: renderCalendario,
     relatorios: renderRelatorios, fechamento: renderFechamento,
+    didi: renderDidiChatScreen, mais: renderMais,
   };
   c.innerHTML = (readOnlyMode ? '<div style="background:var(--gold);color:#3a2b06;text-align:center;padding:8px;font-weight:600;font-size:13px;border-radius:10px;margin-bottom:10px">👀 Modo somente leitura — você está vendo, mas não pode editar</div>' : '') + renderers[currentTab]();
   const fab = document.getElementById('fabBtn');
   const fabDidi = document.getElementById('fabDidiBtn');
-  fab.style.display = readOnlyMode ? 'none' : 'flex';
-  if(fabDidi) fabDidi.style.display = readOnlyMode ? 'none' : 'flex';
+  fab.style.display = (readOnlyMode || currentTab==='didi' || currentTab==='mais') ? 'none' : 'flex';
+  if(fabDidi) fabDidi.style.display = (readOnlyMode || currentTab==='didi') ? 'none' : 'flex';
   if(currentTab==='calendario') drawCalendar();
   if(currentTab==='situacao'){ drawProjectionChart('chartSituacao', 12); }
+  if(currentTab==='mais'){ updateDarkModeButtons(); refreshBioUI(); }
+  if(currentTab==='didi'){ scrollDidiChatToBottom(); }
 }
 function fabAction(){
   if(currentTab==='caixinhas') openBoxForm();
   else openLancForm();
+}
+
+/* ================= MAIS (substitui o antigo menu lateral) ================= */
+function renderMais(){
+  return `
+  <div class="card" style="display:flex;align-items:center;gap:12px">
+    <div class="didiAvatar" style="background:var(--gold-soft);color:var(--ink)">${USER_NAME.charAt(0)}</div>
+    <div><b style="font-size:15px">${USER_NAME}</b><div class="muted" style="font-size:12px">minha conta</div></div>
+  </div>
+
+  <div class="card" style="padding:4px 6px">
+    <button class="menuRow" onclick="goTab('emprestimo')"><span class="mi">📉</span> Empréstimo e Dívidas</button>
+    <button class="menuRow" onclick="goTab('caixinhas')"><span class="mi">🐷</span> Caixinhas</button>
+    <button class="menuRow" onclick="goTab('previsao')"><span class="mi">🧮</span> Previsão de pagamentos</button>
+    <button class="menuRow" onclick="goTab('projecao')"><span class="mi">🔮</span> Projeção do próximo mês</button>
+    <button class="menuRow" onclick="goTab('calendario')"><span class="mi">📅</span> Calendário</button>
+    <button class="menuRow" onclick="goTab('relatorios')"><span class="mi">📊</span> Relatórios</button>
+    <button class="menuRow" onclick="goTab('fechamento')" style="border-bottom:none"><span class="mi">📁</span> Fechamento mensal</button>
+  </div>
+
+  <div class="card" style="padding:4px 6px">
+    <button class="menuRow" id="darkManualBtn" onclick="toggleDarkMode()"><span class="mi">🌙</span> Alternar modo escuro</button>
+    <button class="menuRow" id="darkAutoBtn" onclick="toggleDarkAuto()"><span class="mi">🌗</span> Modo escuro automático (à noite)</button>
+    <button class="menuRow" id="bioToggleBtn" onclick="toggleBiometric()"><span class="mi">🔐</span> Ativar entrada por digital</button>
+    <button class="menuRow" id="notifToggleBtn" onclick="requestNotifPermission()" style="border-bottom:none"><span class="mi">🔔</span> Ativar notificações de vencimento</button>
+  </div>
+
+  <div class="card" style="padding:4px 6px">
+    <button class="menuRow" onclick="exportBackup()"><span class="mi">⬇️</span> Exportar backup</button>
+    <button class="menuRow" onclick="compartilharBackup()"><span class="mi">☁️</span> Compartilhar backup (Drive, etc)</button>
+    <button class="menuRow" onclick="exportCSV()"><span class="mi">📊</span> Exportar CSV (Excel)</button>
+    <button class="menuRow" onclick="document.getElementById('importFile').click()"><span class="mi">⬆️</span> Importar backup</button>
+    <button class="menuRow" onclick="openImportarLote()"><span class="mi">📥</span> Importar lançamentos colados</button>
+    <button class="menuRow" onclick="openUndoHistory()" style="border-bottom:none"><span class="mi">🕐</span> Histórico de desfazer</button>
+  </div>
+
+  <div class="card" style="padding:4px 6px">
+    <button class="menuRow" onclick="openConfiguracoes()" style="border-bottom:none"><span class="mi">⚙️</span> Configurações</button>
+  </div>
+
+  <div class="card" style="padding:4px 6px">
+    <button class="menuRow" onclick="lockApp()"><span class="mi">🔒</span> Bloquear app</button>
+    <button class="menuRow" onclick="resetAllData()" style="border-bottom:none;color:var(--red)"><span class="mi">🗑️</span> Apagar todos os dados</button>
+  </div>
+  `;
+}
+
+/* ================= CHAT DA DIDI ================= */
+let didiChatHistory = [];
+function pushDidiBubble(role, texto){
+  didiChatHistory.push({role, texto, ts:Date.now()});
+  if(didiChatHistory.length>60) didiChatHistory.shift();
+  if(currentTab==='didi') render();
+}
+function scrollDidiChatToBottom(){
+  setTimeout(()=>{
+    const box = document.getElementById('didiChatRow');
+    if(box) box.scrollTop = box.scrollHeight;
+  }, 30);
+}
+function renderDidiChatScreen(){
+  const bubbles = didiChatHistory.length ? didiChatHistory.map(m=>
+    `<div class="chatBubble ${m.role==='user'?'user':'didi'}">${(m.texto||'').replace(/</g,'&lt;')}</div>`
+  ).join('') : `<div class="chatBubble didi">Olá, ${USER_NAME}! Sou a Didi. Pode me falar ou escrever coisas como "gastei 50 no mercado", "quanto eu tenho", "dica do dia" ou "previsão do tempo".</div>`;
+  return `
+    <div class="didiHeader">
+      <div class="didiAvatar">D</div>
+      <div><b>Didi</b><div style="font-size:11px;opacity:.85">Sua assistente financeira</div></div>
+    </div>
+    <div class="chatRow" id="didiChatRow" style="min-height:300px;max-height:calc(100vh - 340px)">${bubbles}</div>
+    <div style="padding:0 4px 6px">
+      <span class="suggestChip" onclick="enviarSugestaoChat('Quanto eu tenho?')">Quanto eu tenho?</span>
+      <span class="suggestChip" onclick="enviarSugestaoChat('Dica do dia')">Dica do dia</span>
+      <span class="suggestChip" onclick="enviarSugestaoChat('Previsão do tempo')">Previsão do tempo</span>
+    </div>
+    <div class="chatInputBar">
+      <input class="f" id="didiChatInput" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter') enviarMensagemChat()">
+      <button class="btn" style="width:44px;height:44px;border-radius:50%;background:var(--teal);color:#fff;padding:0;flex-shrink:0" onclick="enviarMensagemChat()">➤</button>
+      <button class="btn" style="width:44px;height:44px;border-radius:50%;background:var(--gold);color:#241a08;padding:0;flex-shrink:0" onclick="startVoiceQuery()">🎙️</button>
+    </div>
+  `;
+}
+function enviarMensagemChat(){
+  const input = document.getElementById('didiChatInput');
+  if(!input) return;
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  pushDidiBubble('user', text);
+  processarFalaDidi(text);
+}
+function enviarSugestaoChat(text){
+  pushDidiBubble('user', text);
+  processarFalaDidi(text.toLowerCase());
 }
 
 /* ================= SITUAÇÃO ================= */
@@ -1348,6 +1468,7 @@ let didiContext = { pending:null, partial:null, lastLancId:null };
 
 function falarEescutarDeNovo(texto){
   toast(texto);
+  pushDidiBubble('didi', texto);
   if("speechSynthesis" in window){
     try{
       window.speechSynthesis.cancel();
@@ -1488,7 +1609,6 @@ function processarFalaDidi(text){
 }
 
 function startVoiceQuery(auto){
-  if(!auto) toggleDrawer(false);
   const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!Rec){ toast('Reconhecimento de voz não é suportado neste navegador'); return; }
   const rec = new Rec();
@@ -1498,6 +1618,7 @@ function startVoiceQuery(auto){
   rec.onresult = (e)=>{
     const heard = e.results[0][0].transcript.toLowerCase();
     toast(`🎙️ Ouvi: "${heard}"`);
+    pushDidiBubble('user', heard);
     setTimeout(()=>processarFalaDidi(heard), 900);
   };
   rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); };
@@ -1520,6 +1641,7 @@ function melhorVozPtBR(){
       || null;
 }
 function falarComoAle(texto){
+  pushDidiBubble('didi', texto);
   if("speechSynthesis" in window){
     try{
       window.speechSynthesis.cancel();
