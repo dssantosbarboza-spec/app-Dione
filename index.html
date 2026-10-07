@@ -811,7 +811,7 @@ const NAV = [
 const TAB_LABELS = Object.fromEntries(NAV.map(n=>[n.id, n.label]));
 const BOTTOM_NAV = [
   {id:"situacao", label:"Início", ic:"🏠"},
-  {id:"historico", label:"Histórico", ic:"🕘"},
+  {id:"lancamentos", label:"Lançamentos", ic:"🔄"},
   {id:"didi", label:"Didi", ic:"🤖"},
   {id:"cartoes", label:"Cartões", ic:"💳"},
   {id:"mais", label:"Mais", ic:"☰"},
@@ -1108,6 +1108,7 @@ function renderMais(){
   </div>
 
   <div class="card" style="padding:4px 6px">
+    <button class="menuRow" onclick="goTab('historico')"><span class="mi">🕘</span> Histórico</button>
     <button class="menuRow" onclick="goTab('emprestimo')"><span class="mi">📉</span> Empréstimo e Dívidas</button>
     <button class="menuRow" onclick="goTab('caixinhas')"><span class="mi">🐷</span> Caixinhas</button>
     <button class="menuRow" onclick="goTab('previsao')"><span class="mi">🧮</span> Previsão de pagamentos</button>
@@ -1484,13 +1485,25 @@ function falarEescutarDeNovo(texto){
     setTimeout(()=>startVoiceQuery(true), 1600);
   }
 }
-function registrarLancamentoDireto({type, amount, desc, category, date, status}){
+function registrarLancamentoDireto({type, amount, desc, category, date, status, installments}){
   snapshot();
   const cat = category || (type==='saida' ? 'Outras despesas' : 'Outras entradas');
-  const rec = { id:uid('lc'), type, desc: desc||cat, category:cat, amount, date: date||todayStr(), purchaseDate: date||todayStr(), status: status||'realizado', installments:1, installmentNum:1, groupId:null, cardId:null, receipt:null, trashed:false, applied:false };
-  state.lancamentos.push(rec);
-  if(rec.status==='realizado') applyLancEffect(rec);
-  logHist(`Lançamento por conversa com a Didi: ${rec.desc} (${fmt(rec.amount)})`);
+  const n = Math.max(1, installments||1);
+  const valorParcela = n>1 ? Math.round((amount/n)*100)/100 : amount;
+  const groupId = n>1 ? uid('grp') : null;
+  let rec;
+  for(let i=1;i<=n;i++){
+    const r = { id:uid('lc'), type, desc: desc||cat, category:cat, amount: i===n ? (amount - valorParcela*(n-1)) : valorParcela,
+      date: date||todayStr(), purchaseDate: date||todayStr(), status: i===1 ? (status||'realizado') : 'previsto',
+      installments:n, installmentNum:i, groupId, cardId:null, receipt:null, trashed:false, applied:false };
+    if(n>1 && i>1){
+      const d = new Date((date||todayStr())+'T00:00:00'); d.setMonth(d.getMonth()+(i-1));
+      r.date = d.toISOString().slice(0,10); r.purchaseDate = r.date;
+    }
+    state.lancamentos.push(r);
+    if(i===1){ rec = r; if(r.status==='realizado') applyLancEffect(r); }
+  }
+  logHist(`Lançamento por conversa com a Didi: ${rec.desc} (${fmt(amount)}${n>1?' em '+n+'x':''})`);
   save();
   render();
   didiContext.lastLancId = rec.id;
@@ -1539,40 +1552,122 @@ function compararComMesPassado(){
   openSheet('Comparativo de gastos', `<div style="font-size:15px;line-height:1.6">${texto}</div>`);
   falarComoAle(texto);
 }
+function formatarDataFalada(dateStr){
+  const hoje = todayStr();
+  const d = new Date(hoje); d.setDate(d.getDate()-1);
+  const ontem = d.toISOString().slice(0,10);
+  if(dateStr===hoje) return 'hoje';
+  if(dateStr===ontem) return 'ontem';
+  return dateStr.split('-').reverse().join('/');
+}
+function resumoRascunho(r){
+  const partes = [`${r.desc||r.category}`, r.category?`(${r.category})`:null, fmt(r.amount), formatarDataFalada(r.date),
+    r.status==='realizado'?'já realizado':'previsto', r.installments>1?`em ${r.installments}x`:null];
+  return partes.filter(Boolean).join(', ');
+}
+function perguntarProximoPasso(){
+  const r = didiContext.draft;
+  if(!r.desc && !r.category){
+    didiContext.pending = 'aguardando_descricao';
+    falarEescutarDeNovo(`Opa, ${fmt(r.amount)} em quê?`);
+    return;
+  }
+  if(!r.date){
+    didiContext.pending = 'aguardando_data';
+    falarEescutarDeNovo(`Beleza, ${r.category?r.category.toLowerCase():r.desc}. Foi hoje, ontem, ou outro dia?`);
+    return;
+  }
+  if(!r.status){
+    didiContext.pending = 'aguardando_status';
+    falarEescutarDeNovo(`Isso já foi ${r.type==='saida'?'pago':'recebido'} (realizado), ou ainda está previsto?`);
+    return;
+  }
+  if(r.type==='saida' && r.formaPagamento===undefined){
+    didiContext.pending = 'aguardando_forma_pagamento';
+    falarEescutarDeNovo(`Foi no cartão, no pix, ou em dinheiro?`);
+    return;
+  }
+  if(r.formaPagamento==='cartao' && !r.installments){
+    didiContext.pending = 'aguardando_parcelamento';
+    falarEescutarDeNovo(`À vista ou parcelado? Se parcelado, me diz quantas vezes.`);
+    return;
+  }
+  didiContext.pending = 'aguardando_confirmacao_final';
+  falarEescutarDeNovo(`Confirma: ${resumoRascunho(r)}. Posso lançar?`);
+}
 function processarFalaDidi(text){
   const lower = text.toLowerCase();
 
-  if(didiContext.pending==='descricao'){
-    const desc = text.trim();
-    const inferred = inferTypeFromDesc(desc);
-    const rec = registrarLancamentoDireto({
-      type: didiContext.partial.type,
-      amount: didiContext.partial.amount,
-      desc: inferred ? inferred.category : desc,
-      category: inferred ? inferred.category : null,
-      date: todayStr(), status: 'realizado'
-    });
-    didiContext.partial = null;
-    didiContext.pending = 'confirmar_dia';
-    falarEescutarDeNovo(`Beleza. Registrei ${fmt(rec.amount)}${rec.category?' em '+rec.category.toLowerCase():''}. Foi hoje?`);
+  if(didiContext.pending && /\b(cancela|cancelar|deixa pra l[áa]|esquece isso|para)\b/.test(lower)){
+    didiContext.pending = null; didiContext.draft = null; didiContext.partial = null;
+    falarEescutarDeNovoSemOuvir ? null : null;
+    toast('Tudo bem, cancelei.'); pushDidiBubble('didi','Tudo bem, cancelei. Nada foi lançado.'); falarComoAle('Tudo bem, cancelei. Nada foi lançado.');
     return;
   }
-  if(didiContext.pending==='confirmar_dia'){
-    didiContext.pending = null;
-    if(/ontem|anteontem/.test(lower)){ corrigirDataUltimoLancamento(lower); }
-    else if(/hoje|sim|isso|foi hoje|correto/.test(lower)){ toast('Certo, mantido como hoje.'); }
-    else { processarFalaDidi(text); return; }
+
+  if(didiContext.pending==='aguardando_descricao'){
+    const inferred = inferTypeFromDesc(text);
+    didiContext.draft.desc = inferred ? inferred.category : text.trim();
+    didiContext.draft.category = inferred ? inferred.category : null;
+    perguntarProximoPasso();
+    return;
+  }
+  if(didiContext.pending==='aguardando_data'){
+    const hoje = todayStr();
+    if(/anteontem/.test(lower)){ const d=new Date(hoje); d.setDate(d.getDate()-2); didiContext.draft.date = d.toISOString().slice(0,10); }
+    else if(/ontem/.test(lower)){ const d=new Date(hoje); d.setDate(d.getDate()-1); didiContext.draft.date = d.toISOString().slice(0,10); }
+    else { didiContext.draft.date = hoje; } // hoje, sim, ou qualquer resposta não reconhecida assume hoje
+    perguntarProximoPasso();
+    return;
+  }
+  if(didiContext.pending==='aguardando_status'){
+    if(/previst[oa]|ainda n[ãa]o|n[ãa]o ainda|vou pagar|vou receber/.test(lower)) didiContext.draft.status = 'previsto';
+    else didiContext.draft.status = 'realizado'; // realizado, sim, já, etc.
+    perguntarProximoPasso();
+    return;
+  }
+  if(didiContext.pending==='aguardando_forma_pagamento'){
+    if(/cart[ãa]o/.test(lower)) didiContext.draft.formaPagamento = 'cartao';
+    else if(/pix/.test(lower)) didiContext.draft.formaPagamento = 'pix';
+    else didiContext.draft.formaPagamento = 'dinheiro';
+    if(didiContext.draft.formaPagamento!=='cartao') didiContext.draft.installments = 1;
+    perguntarProximoPasso();
+    return;
+  }
+  if(didiContext.pending==='aguardando_parcelamento'){
+    if(/\bà vista\b|\ba vista\b/.test(lower)){ didiContext.draft.installments = 1; }
+    else {
+      const NUM_WORDS = {duas:2,dois:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12};
+      const normLower = lower.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const digitMatch = lower.match(/(\d{1,2})/);
+      const wordMatch = normLower.match(/(duas|dois|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)/);
+      didiContext.draft.installments = digitMatch ? parseInt(digitMatch[1],10) : (wordMatch ? NUM_WORDS[wordMatch[1]] : 1);
+    }
+    perguntarProximoPasso();
+    return;
+  }
+  if(didiContext.pending==='aguardando_confirmacao_final'){
+    const r = didiContext.draft;
+    didiContext.pending = null; didiContext.draft = null;
+    if(/^(sim|pode|confirma|isso|ok|manda|lan[çc]a)/.test(lower)){
+      const rec = registrarLancamentoDireto(r);
+      const texto = `Prontinho! Lancei ${resumoRascunho(rec)}.`;
+      pushDidiBubble('didi', texto); falarComoAle(texto);
+    } else {
+      const texto = 'Tudo bem, não lancei nada.';
+      pushDidiBubble('didi', texto); falarComoAle(texto);
+    }
     return;
   }
   if(didiContext.pending==='confirmar_analise_gastos'){
     didiContext.pending = null;
     if(/quero|sim|pode|vai|manda|claro|isso/.test(lower)) analisarGastosPorCategoria();
-    else toast('Tudo bem.');
+    else { const t='Tudo bem.'; pushDidiBubble('didi',t); falarComoAle(t); }
     return;
   }
   if(didiContext.pending==='confirmar_comparativo'){
     if(/quero|sim|pode|vai|manda|claro|isso/.test(lower)) compararComMesPassado();
-    else { didiContext.pending=null; toast('Tudo bem.'); }
+    else { didiContext.pending=null; const t='Tudo bem.'; pushDidiBubble('didi',t); falarComoAle(t); }
     return;
   }
   if(didiContext.lastLancId && /\b(foi\s*)?(ontem|anteontem|hoje)\b/.test(lower) && lower.trim().split(/\s+/).length<=4){
@@ -1587,23 +1682,15 @@ function processarFalaDidi(text){
   const parsedLc = parseVoiceLanc(text);
   if(parsedLc.type && parsedLc.amount!=null){
     const inferred = inferTypeFromDesc(parsedLc.desc);
-    const finalType = inferred ? inferred.type : parsedLc.type;
-    if(!parsedLc.desc || parsedLc.desc.trim().length<2){
-      didiContext.partial = { type: finalType, amount: parsedLc.amount };
-      didiContext.pending = 'descricao';
-      falarEescutarDeNovo(`Opa, ${fmt(parsedLc.amount)} em quê?`);
-      return;
-    } else {
-      const rec = registrarLancamentoDireto({
-        type: finalType, amount: parsedLc.amount,
-        desc: inferred ? inferred.category : parsedLc.desc,
-        category: inferred ? inferred.category : null,
-        date: todayStr(), status: parsedLc.status || 'realizado'
-      });
-      didiContext.pending = 'confirmar_dia';
-      falarEescutarDeNovo(`Beleza. Registrei ${fmt(rec.amount)}${rec.category?' em '+rec.category.toLowerCase():''}. Foi hoje?`);
-      return;
-    }
+    didiContext.draft = {
+      type: inferred ? inferred.type : parsedLc.type,
+      amount: parsedLc.amount,
+      desc: inferred ? inferred.category : (parsedLc.desc||null),
+      category: inferred ? inferred.category : null,
+      date: null, status: null, formaPagamento: undefined, installments: null
+    };
+    perguntarProximoPasso();
+    return;
   }
   answerVoiceQuery(text);
 }
