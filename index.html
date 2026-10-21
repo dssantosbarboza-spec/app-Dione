@@ -218,6 +218,11 @@ const DEFAULT_STATE = () => ({
   closings: [],
   undoSnapshots: [],
   categoryBudgets: {},
+  aniversarios: [],
+  contatos: [],
+  agenda: [],
+  viagem: null,
+  configAgenda: { horaResumoManha: '08:00' },
 });
 
 let state = DEFAULT_STATE();
@@ -453,6 +458,11 @@ async function unlockWithBiometric(retryCount){
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     if(!state.otherAssets) state.otherAssets = [];
+    if(!state.aniversarios) state.aniversarios = [];
+    if(!state.contatos) state.contatos = [];
+    if(!state.agenda) state.agenda = [];
+    if(state.viagem===undefined) state.viagem = null;
+    if(!state.configAgenda) state.configAgenda = { horaResumoManha: '08:00' };
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     applyAutoDarkMode();
@@ -742,6 +752,11 @@ async function tryUnlock(){
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     if(!state.otherAssets) state.otherAssets = [];
+    if(!state.aniversarios) state.aniversarios = [];
+    if(!state.contatos) state.contatos = [];
+    if(!state.agenda) state.agenda = [];
+    if(state.viagem===undefined) state.viagem = null;
+    if(!state.configAgenda) state.configAgenda = { horaResumoManha: '08:00' };
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('app').style.display='flex';
     applyAutoDarkMode();
@@ -1163,11 +1178,15 @@ function renderDidiChatScreen(){
     `<div class="chatBubble ${m.role==='user'?'user':'didi'}">${(m.texto||'').replace(/</g,'&lt;')}</div>`
   ).join('') : `<div class="chatBubble didi">Olá, ${USER_NAME}! Sou a Didi. Pode me falar ou escrever coisas como "gastei 50 no mercado", "quanto eu tenho", "dica do dia" ou "previsão do tempo".</div>`;
   return `
-    <div class="didiHeader">
-      <div class="didiAvatar">D</div>
-      <div><b>Didi</b><div style="font-size:11px;opacity:.85">Sua assistente financeira</div></div>
+    <div class="didiHeader" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="didiAvatar">D</div>
+        <div><b>Didi</b><div style="font-size:11px;opacity:.85">Sua assistente financeira</div></div>
+      </div>
+      <button onclick="confirmarLimparConversa()" style="background:none;border:none;color:#fff;font-size:18px;opacity:.85">🗑️</button>
     </div>
-    <div class="chatRow" id="didiChatRow" style="min-height:300px;max-height:calc(100vh - 340px)">${bubbles}</div>
+    ${renderDidiVoiceStatusBar()}
+    <div class="chatRow" id="didiChatRow" style="min-height:280px;max-height:calc(100vh - 380px)">${bubbles}</div>
     <div style="padding:0 4px 6px">
       <span class="suggestChip" onclick="enviarSugestaoChat('Quanto eu tenho?')">Quanto eu tenho?</span>
       <span class="suggestChip" onclick="enviarSugestaoChat('Dica do dia')">Dica do dia</span>
@@ -1176,9 +1195,16 @@ function renderDidiChatScreen(){
     <div class="chatInputBar">
       <input class="f" id="didiChatInput" placeholder="Digite sua mensagem..." onkeydown="if(event.key==='Enter') enviarMensagemChat()">
       <button class="btn" style="width:44px;height:44px;border-radius:50%;background:var(--teal);color:#fff;padding:0;flex-shrink:0" onclick="enviarMensagemChat()">➤</button>
-      <button class="btn" style="width:44px;height:44px;border-radius:50%;background:var(--gold);color:#241a08;padding:0;flex-shrink:0" onclick="startVoiceQuery()">🎙️</button>
+      <button class="btn" style="width:44px;height:44px;border-radius:50%;background:var(--gold);color:#241a08;padding:0;flex-shrink:0" onclick="iniciarConversaContinua()" title="Conversa contínua">🎙️</button>
     </div>
   `;
+}
+function confirmarLimparConversa(){
+  if(!didiChatHistory.length){ toast('Não há conversa pra limpar'); return; }
+  if(confirm('Limpar toda a conversa com a Didi? Isso não apaga seus dados financeiros, só o histórico de mensagens.')){
+    didiChatHistory = [];
+    render();
+  }
 }
 function enviarMensagemChat(){
   const input = document.getElementById('didiChatInput');
@@ -1468,21 +1494,30 @@ function onLancTypeChange(){
 let didiContext = { pending:null, partial:null, lastLancId:null };
 
 function falarEescutarDeNovo(texto){
+  didiConversaAtiva = true;
+  falarInterno(texto, true);
+}
+function falarInterno(texto, continuarEscutando){
   toast(texto);
   pushDidiBubble('didi', texto);
+  const seguir = ()=>{
+    if(continuarEscutando && didiConversaAtiva && !didiPausado) setTimeout(()=>startVoiceQuery(true), 250);
+    else setDidiVoiceState(didiConversaAtiva ? 'pausado' : 'idle');
+  };
   if("speechSynthesis" in window){
     try{
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(texto);
-      utter.lang = 'pt-BR';
+      utter.lang = 'pt-BR'; utter.rate = 1; utter.pitch = 1;
       const voz = melhorVozPtBR();
       if(voz) utter.voice = voz;
-      utter.onend = ()=>{ setTimeout(()=>startVoiceQuery(true), 250); };
-      utter.onerror = ()=>{ setTimeout(()=>startVoiceQuery(true), 250); };
+      setDidiVoiceState('falando');
+      utter.onend = seguir;
+      utter.onerror = seguir;
       window.speechSynthesis.speak(utter);
-    }catch(e){ setTimeout(()=>startVoiceQuery(true), 1200); }
+    }catch(e){ seguir(); }
   } else {
-    setTimeout(()=>startVoiceQuery(true), 1600);
+    setTimeout(seguir, 1200);
   }
 }
 function registrarLancamentoDireto({type, amount, desc, category, date, status, installments}){
@@ -1695,20 +1730,76 @@ function processarFalaDidi(text){
   answerVoiceQuery(text);
 }
 
+let didiVoiceState = 'idle'; // idle|escutando|pensando|falando|pausado
+let didiConversaAtiva = false;
+let didiPausado = false;
+let _didiRecAtual = null;
+function setDidiVoiceState(novo){
+  didiVoiceState = novo;
+  const el = document.getElementById('didiVoiceStatus');
+  if(el) el.outerHTML = renderDidiVoiceStatusBar();
+}
+function renderDidiVoiceStatusBar(){
+  if(!didiConversaAtiva && didiVoiceState==='idle') return '<div id="didiVoiceStatus"></div>';
+  const map = {
+    idle: {ic:'', label:''},
+    escutando: {ic:'🎤', label:'Escutando...'},
+    pensando: {ic:'🧠', label:'Pensando...'},
+    falando: {ic:'🔊', label:'Falando... (toque pra interromper)'},
+    pausado: {ic:'⏸️', label:'Pausado'},
+  };
+  const m = map[didiVoiceState] || map.idle;
+  return `<div id="didiVoiceStatus" style="display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:14px;padding:8px 12px;margin:0 4px 8px;font-size:12.5px" onclick="interromperFala()">
+    <span>${m.ic}</span><span style="flex:1">${m.label}</span>
+    ${didiConversaAtiva ? `<button class="btn" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();${didiPausado?'retomarConversa()':'pausarConversa()'}">${didiPausado?'▶️':'⏸️'}</button>
+    <button class="btn" style="padding:4px 10px;font-size:11px;background:var(--red)" onclick="event.stopPropagation();encerrarConversa()">⏹️</button>` : ''}
+  </div>`;
+}
+function iniciarConversaContinua(){
+  didiConversaAtiva = true; didiPausado = false;
+  startVoiceQuery(false);
+}
+function pausarConversa(){
+  didiPausado = true;
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(_didiRecAtual){ try{ _didiRecAtual.abort(); }catch(e){} }
+  setDidiVoiceState('pausado');
+}
+function retomarConversa(){
+  didiPausado = false;
+  startVoiceQuery(true);
+}
+function encerrarConversa(){
+  didiConversaAtiva = false; didiPausado = false;
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(_didiRecAtual){ try{ _didiRecAtual.abort(); }catch(e){} }
+  setDidiVoiceState('idle');
+}
+function interromperFala(){
+  if(didiVoiceState==='falando'){
+    if(window.speechSynthesis) window.speechSynthesis.cancel();
+    if(didiConversaAtiva && !didiPausado) startVoiceQuery(true);
+  }
+}
 function startVoiceQuery(auto){
   const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!Rec){ toast('Reconhecimento de voz não é suportado neste navegador'); return; }
+  if(didiPausado) return;
   const rec = new Rec();
+  _didiRecAtual = rec;
   rec.lang = 'pt-BR'; rec.continuous = false; rec.interimResults = false;
+  setDidiVoiceState('escutando');
   toast(auto ? '🎙️ Ouvindo sua resposta...' : '🎙️ Didi está ouvindo... pergunte, ex: "Didi, quanto eu tenho" ou "Didi, o que tem pra pagar esse mês"');
-  try{ rec.start(); }catch(e){ toast('Não foi possível abrir o microfone.'); return; }
+  try{ rec.start(); }catch(e){ toast('Não foi possível abrir o microfone.'); setDidiVoiceState('idle'); return; }
   rec.onresult = (e)=>{
     const heard = e.results[0][0].transcript.toLowerCase();
     toast(`🎙️ Ouvi: "${heard}"`);
     pushDidiBubble('user', heard);
+    setDidiVoiceState('pensando');
     setTimeout(()=>processarFalaDidi(heard), 900);
   };
-  rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); };
+  rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); setDidiVoiceState(didiConversaAtiva?'pausado':'idle'); if(didiConversaAtiva) didiPausado=true; };
+  rec.onend = ()=>{ if(didiVoiceState==='escutando') setDidiVoiceState(didiConversaAtiva && !didiPausado ? 'pensando' : 'idle'); };
 }
 let _cachedVoices = [];
 function loadVoicesCache(){
@@ -1728,19 +1819,7 @@ function melhorVozPtBR(){
       || null;
 }
 function falarComoAle(texto){
-  pushDidiBubble('didi', texto);
-  if("speechSynthesis" in window){
-    try{
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(texto);
-      utter.lang = 'pt-BR';
-      utter.rate = 1;
-      utter.pitch = 1;
-      const voz = melhorVozPtBR();
-      if(voz) utter.voice = voz;
-      window.speechSynthesis.speak(utter);
-    }catch(e){}
-  }
+  falarInterno(texto, didiConversaAtiva);
 }
 const MONTH_NAMES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function extractMonthFromText(text){
@@ -3227,6 +3306,11 @@ function importBackup(event){
     if(!state.nameAliases) state.nameAliases = {};
     if(!state.settings) state.settings = { fechamentoEmail: 'dssantosbarboza@gmail.com' };
     if(!state.otherAssets) state.otherAssets = [];
+    if(!state.aniversarios) state.aniversarios = [];
+    if(!state.contatos) state.contatos = [];
+    if(!state.agenda) state.agenda = [];
+    if(state.viagem===undefined) state.viagem = null;
+    if(!state.configAgenda) state.configAgenda = { horaResumoManha: '08:00' };
     if(!sessionKey){
       alert("⚠️ ERRO: sessão inválida, não foi possível salvar o backup importado. Recarregue o app e tente de novo.");
       return;
@@ -3402,6 +3486,11 @@ function addOtherAsset(){
   const value = parseFloat((document.getElementById('cfg_asset_value').value||'0').replace(',','.'));
   if(!desc || value<=0){ toast('Preencha descrição e valor'); return; }
   if(!state.otherAssets) state.otherAssets = [];
+    if(!state.aniversarios) state.aniversarios = [];
+    if(!state.contatos) state.contatos = [];
+    if(!state.agenda) state.agenda = [];
+    if(state.viagem===undefined) state.viagem = null;
+    if(!state.configAgenda) state.configAgenda = { horaResumoManha: '08:00' };
   state.otherAssets.push({desc, value});
   save();
   toast('Bem adicionado');
