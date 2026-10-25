@@ -1506,21 +1506,16 @@ function falarInterno(texto, continuarEscutando){
   };
   if("speechSynthesis" in window){
     try{
-      window.speechSynthesis.cancel();
-      setTimeout(()=>{
-        try{
-          const utter = new SpeechSynthesisUtterance(texto);
-          utter.lang = 'pt-BR'; utter.rate = 1; utter.pitch = 1;
-          const voz = melhorVozPtBR();
-          if(voz) utter.voice = voz;
-          setDidiVoiceState('falando');
-          utter.onend = seguir;
-          utter.onerror = seguir;
-          window.speechSynthesis.speak(utter);
-          // Reforço contra o bug do Chrome/Android que silencia a fala sem avisar
-          setTimeout(()=>{ if(!window.speechSynthesis.speaking && !window.speechSynthesis.pending && didiVoiceState==='falando') seguir(); }, 4000);
-        }catch(e){ seguir(); }
-      }, 150);
+      if(window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(texto);
+      utter.lang = 'pt-BR'; utter.rate = 1; utter.pitch = 1;
+      const voz = melhorVozPtBR();
+      if(voz) utter.voice = voz;
+      setDidiVoiceState('falando');
+      utter.onend = seguir;
+      utter.onerror = seguir;
+      window.speechSynthesis.speak(utter);
+      setTimeout(()=>{ if(!window.speechSynthesis.speaking && didiVoiceState==='falando') seguir(); }, 6000);
     }catch(e){ seguir(); }
   } else {
     setTimeout(seguir, 1200);
