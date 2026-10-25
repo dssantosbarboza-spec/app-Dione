@@ -4,7 +4,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>App Pessoal Dione</title>
+<title>Didi — App Pessoal Dione</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F4A44'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23E3AC52' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F4A44'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23E3AC52' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="manifest" id="manifestLink">
@@ -150,6 +150,42 @@ canvas{width:100%;display:block;}
 .searchBar{display:flex;gap:8px;margin-bottom:10px;}
 .searchBar input{flex:1;}
 hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
+
+/* ===== DIDI COLORIDA — acabamento visual inspirado no modelo aprovado ===== */
+:root{--bg:#f4f0e5;--panel:#fffdf8;--ink:#172d25;--ink-soft:#60746a;--teal:#075a3c;--teal-dark:#033c2a;--gold:#f4bd22;--gold-soft:#fff0b8;--green:#138b3c;--green-soft:#d9f8df;--red:#e53935;--red-soft:#ffe1df;--line:#eadfca;--radius:20px}
+body{background:radial-gradient(ellipse at top left,rgba(255,205,54,.14),transparent 34%),var(--bg)}
+header.top{background:linear-gradient(135deg,#075a3c 0%,#003322 100%);box-shadow:0 4px 18px #00332230;padding-top:calc(13px + env(safe-area-inset-top,0px))}
+header.top .brandMark,.lockLogo,.didiAvatar{box-shadow:0 3px 10px #0002}
+main{padding:12px 10px 86px}
+.card{border:1px solid rgba(154,119,52,.12);box-shadow:0 5px 18px rgba(45,57,38,.07);}
+.btn{background:linear-gradient(135deg,#087847,#045232);box-shadow:0 3px 0 rgba(0,0,0,.08);transition:transform .12s ease,filter .12s ease}
+.btn:active,.fab:active,.bnav-item:active{transform:scale(.97)}
+.btn.gold{background:linear-gradient(135deg,#ffd94b,#efa900);color:#302500}
+.btn.danger{background:linear-gradient(135deg,#ff5b51,#d92327)}
+.btn.outline{box-shadow:none;background:var(--panel);border-color:#0b704b;color:#075a3c}
+.bottomnav{background:linear-gradient(180deg,#064a34,#022f22);border-top:1px solid #e7bd39;box-shadow:0 -5px 18px #00332220;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+.bnav-item{color:#dce9df;font-size:10px;font-weight:600}
+.bnav-item.active{color:#ffd43b}
+.bnav-item.active .bnav-ic{background:linear-gradient(135deg,#ffd94b,#f1a900);color:#173d2b;box-shadow:0 2px 9px #0002}
+.bnav-ic{width:32px;height:29px;border-radius:10px}
+.fab{background:linear-gradient(135deg,#ffd94b,#efa900);color:#173d2b;border:2px solid #fff6;box-shadow:0 6px 18px #0003}
+.fabDidi{background:linear-gradient(135deg,#0b8c4c,#034b32);border:2px solid #ffd43b}
+.didiHeader{background:linear-gradient(135deg,#087347,#033b29);box-shadow:0 4px 15px #00332220}
+.suggestChip{box-shadow:0 2px 8px #0000000c;border-color:#e5d7b9}
+.menuRow{border-radius:10px;padding-left:10px;padding-right:10px}
+input.f:focus,select.f:focus,textarea.f:focus,.lockCard input:focus{outline:2px solid #e8b82d;border-color:#e8b82d}
+/* Atalhos coloridos na tela inicial */
+.didiWelcome{display:flex;align-items:center;gap:12px;padding:15px;margin:0 0 12px;border-radius:20px;background:linear-gradient(135deg,#075a3c,#023b29);color:white;box-shadow:0 7px 20px #00332222;position:relative;overflow:hidden}
+.didiWelcome:after{content:'D';position:absolute;right:8px;top:-22px;font-family:Georgia,serif;font-size:110px;font-weight:bold;color:#ffffff0c;pointer-events:none}
+.didiWelcome .welcomeMark{width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:15px;background:linear-gradient(135deg,#ffe15b,#efa900);color:#143c29;font:700 25px Georgia;flex-shrink:0;box-shadow:0 3px 10px #0002}
+.didiWelcome b{font:600 19px Georgia,serif;display:block;margin-bottom:3px}
+.didiWelcome span{font-size:12px;color:#e0eee4;line-height:1.45;display:block}
+.quickTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.quickTile{min-height:76px;border:1px solid #ffffff80;border-radius:15px;color:white;padding:11px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:700 11px Manrope,sans-serif;box-shadow:0 4px 10px #00000014;text-align:center}
+.quickTile span{font-size:23px;line-height:1}
+.quickTile.blue{background:linear-gradient(145deg,#2588e8,#0752b5)}.quickTile.purple{background:linear-gradient(145deg,#b44df4,#7622bc)}.quickTile.orange{background:linear-gradient(145deg,#ffae26,#e96b08)}.quickTile.green{background:linear-gradient(145deg,#20b85c,#08793d)}.quickTile.red{background:linear-gradient(145deg,#ff645b,#d8202b)}.quickTile.gold{background:linear-gradient(145deg,#ffdf55,#efa800);color:#203c28}
+@media(min-width:520px){main{max-width:720px;margin:0 auto;width:100%}.didiWelcome{padding:20px}.quickTile{min-height:88px;font-size:12px}}
+
 </style>
 </head>
 <body>
@@ -1247,7 +1283,16 @@ function renderSituacao(){
   const isComprometido = podeGastar<0;
   const ringPct = saldo!==0 ? Math.max(0,Math.min(100,pct)) : 0;
   return `
-  <div class="card" style="padding:20px 18px 24px;margin:-12px -10px 10px;border:none;border-radius:0 0 28px 28px;background:linear-gradient(180deg,var(--teal-dark) 0%, var(--bg) 100%);color:#F4F1E8">
+  <section class="didiWelcome"><div class="welcomeMark">D</div><div><b>Olá, ${USER_NAME}! 👋</b><span>Eu sou a Didi. Vamos cuidar bem do seu dinheiro hoje?</span></div></section>
+  <div class="quickTiles" aria-label="Atalhos rápidos">
+    <button class="quickTile blue" onclick="fabAction()"><span>＋</span>Novo lançamento</button>
+    <button class="quickTile purple" onclick="goTab('historico')"><span>▤</span>Histórico</button>
+    <button class="quickTile orange" onclick="goTab('cartoes')"><span>▣</span>Cartões</button>
+    <button class="quickTile green" onclick="goTab('calendario')"><span>▦</span>Calendário</button>
+    <button class="quickTile blue" onclick="goTab('relatorios')"><span>▥</span>Relatórios</button>
+    <button class="quickTile gold" onclick="goTab('mais')"><span>⠿</span>Mais opções</button>
+  </div>
+  <div class="card" style="padding:20px 18px 24px;margin:0 0 10px;border:none;border-radius:24px;background:linear-gradient(180deg,var(--teal-dark) 0%, #075a3c 62%, var(--bg) 100%);color:#F4F1E8">
     <div style="font-size:10px;letter-spacing:.06em;color:var(--gold);text-transform:uppercase;font-weight:700;margin-bottom:14px">Visão geral</div>
     <div style="display:flex;align-items:center;gap:18px">
       <div style="position:relative;width:104px;height:104px;flex-shrink:0">
@@ -1498,27 +1543,104 @@ function falarEescutarDeNovo(texto){
   falarInterno(texto, true);
 }
 function falarInterno(texto, continuarEscutando){
-  toast(texto);
-  pushDidiBubble('didi', texto);
+  const mensagem = String(texto == null ? '' : texto).trim();
+  if(!mensagem) return;
+  toast(mensagem);
+  pushDidiBubble('didi', mensagem);
+
+  let concluido = false;
+  let tentouVozPadrao = false;
+  let watchdog = null;
+  const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+
   const seguir = ()=>{
-    if(continuarEscutando && didiConversaAtiva && !didiPausado) setTimeout(()=>startVoiceQuery(true), 250);
-    else setDidiVoiceState(didiConversaAtiva ? 'pausado' : 'idle');
+    if(concluido) return;
+    concluido = true;
+    if(watchdog) clearTimeout(watchdog);
+    if(continuarEscutando && didiConversaAtiva && !didiPausado){
+      setTimeout(()=>startVoiceQuery(true), 350);
+    } else {
+      setDidiVoiceState(didiConversaAtiva ? 'pausado' : 'idle');
+    }
   };
-  if("speechSynthesis" in window){
+
+  if(!synth || typeof window.SpeechSynthesisUtterance === 'undefined'){
+    setDidiVoiceState('idle');
+    toast('A leitura em voz alta não está disponível neste navegador. Confira as permissões e a saída de áudio do aparelho.');
+    seguir();
+    return;
+  }
+
+  const falar = (usarVozSelecionada)=>{
+    if(concluido) return;
     try{
-      if(window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(texto);
-      utter.lang = 'pt-BR'; utter.rate = 1; utter.pitch = 1;
-      const voz = melhorVozPtBR();
+      const utter = new SpeechSynthesisUtterance(mensagem);
+      utter.lang = 'pt-BR';
+      utter.rate = 0.96;
+      utter.pitch = 1;
+      utter.volume = 1;
+      const voz = usarVozSelecionada ? melhorVozPtBR() : null;
       if(voz) utter.voice = voz;
-      setDidiVoiceState('falando');
+
+      utter.onstart = ()=>{
+        setDidiVoiceState('falando');
+        if(watchdog) clearTimeout(watchdog);
+        // Margem proporcional ao tamanho da resposta; evita retomar o microfone
+        // enquanto a Didi ainda está falando.
+        watchdog = setTimeout(()=>{
+          if(!concluido && !synth.speaking && !synth.pending) seguir();
+        }, Math.max(15000, mensagem.length * 180));
+      };
       utter.onend = seguir;
-      utter.onerror = seguir;
-      window.speechSynthesis.speak(utter);
-      setTimeout(()=>{ if(!window.speechSynthesis.speaking && didiVoiceState==='falando') seguir(); }, 6000);
-    }catch(e){ seguir(); }
-  } else {
-    setTimeout(seguir, 1200);
+      utter.onerror = (event)=>{
+        // Alguns aparelhos Android falham com uma voz específica. Tenta uma vez
+        // com a voz padrão do navegador antes de desistir.
+        if(!tentouVozPadrao && usarVozSelecionada && event && event.error !== 'canceled' && event.error !== 'interrupted'){
+          tentouVozPadrao = true;
+          setTimeout(()=>falar(false), 180);
+          return;
+        }
+        seguir();
+      };
+
+      setDidiVoiceState('falando');
+      synth.resume();
+      synth.speak(utter);
+
+      // Alguns navegadores Android ficam com a fila de fala suspensa após cancel().
+      setTimeout(()=>{
+        if(!concluido && (synth.pending || synth.speaking)) synth.resume();
+        else if(!concluido && didiVoiceState === 'falando' && !synth.speaking && !synth.pending){
+          // Dá tempo para o motor de voz iniciar antes de considerar falha.
+          setTimeout(()=>{
+            if(!concluido && !synth.speaking && !synth.pending && !tentouVozPadrao){
+              tentouVozPadrao = true;
+              falar(false);
+            } else if(!concluido && !synth.speaking && !synth.pending) seguir();
+          }, 900);
+        }
+      }, 300);
+    }catch(e){
+      if(!tentouVozPadrao && usarVozSelecionada){
+        tentouVozPadrao = true;
+        setTimeout(()=>falar(false), 180);
+      } else {
+        seguir();
+      }
+    }
+  };
+
+  try{
+    if(synth.speaking || synth.pending) synth.cancel();
+    // Pequeno intervalo após cancel() ajuda o Chrome Android a iniciar a próxima fala.
+    setTimeout(()=>{
+      if(concluido) return;
+      try{ synth.resume(); }catch(e){}
+      if(!_cachedVoices.length) loadVoicesCache();
+      falar(true);
+    }, 180);
+  }catch(e){
+    falar(false);
   }
 }
 function registrarLancamentoDireto({type, amount, desc, category, date, status, installments}){
