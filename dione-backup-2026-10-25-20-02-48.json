@@ -1,0 +1,105 @@
+{
+  "saldo": 0,
+  "pendingSalaryDeduction": 0,
+  "categoriesIn": [
+    "Salário",
+    "Aluguel",
+    "Vale",
+    "Freelance",
+    "Reembolso",
+    "Vendas",
+    "Outras entradas"
+  ],
+  "categoriesOut": [
+    "Moradia",
+    "Condomínio",
+    "Água",
+    "Luz",
+    "Gás",
+    "Internet",
+    "Telefone",
+    "Alimentação",
+    "Supermercado",
+    "Transporte",
+    "Combustível",
+    "Saúde",
+    "Farmácia",
+    "Educação",
+    "Vestuário",
+    "Lazer",
+    "Assinaturas/Streaming",
+    "Cartão",
+    "Cigarros",
+    "Jogos/Loterias",
+    "Pets",
+    "Presentes",
+    "Impostos/Taxas",
+    "Manutenção",
+    "Beleza/Cuidados pessoais",
+    "Empréstimo",
+    "Dívidas",
+    "Caixinha",
+    "Outras despesas"
+  ],
+  "lancamentos": [],
+  "cards": [
+    {
+      "id": "card_main",
+      "name": "Cartão de Crédito Nubank Dione",
+      "limit": 350,
+      "dueDay": 12,
+      "bestDay": 5,
+      "closingDay": null,
+      "invoices": []
+    },
+    {
+      "id": "card_shopee",
+      "name": "Shopee",
+      "limit": 500,
+      "dueDay": 6,
+      "bestDay": 27,
+      "closingDay": 26,
+      "invoices": []
+    }
+  ],
+  "loan": {
+    "id": "loan1",
+    "total": 1000,
+    "installmentsCount": 12,
+    "installmentValue": 150,
+    "dueDay": 8,
+    "nextDate": "2026-09-08",
+    "paidCount": 0
+  },
+  "debts": [],
+  "boxes": [
+    {
+      "id": "box_vitoria",
+      "name": "Vitória",
+      "goal": 5000,
+      "balance": 20,
+      "monthlyPlan": 0,
+      "contributions": []
+    }
+  ],
+  "movements": [],
+  "history": [],
+  "trash": [],
+  "closings": [],
+  "undoSnapshots": [],
+  "categoryBudgets": {},
+  "customCategoriesOut": [],
+  "customCategoriesIn": [],
+  "nameAliases": {},
+  "settings": {
+    "fechamentoEmail": "dssantosbarboza@gmail.com"
+  },
+  "otherAssets": [],
+  "aniversarios": [],
+  "contatos": [],
+  "agenda": [],
+  "viagem": null,
+  "configAgenda": {
+    "horaResumoManha": "08:00"
+  }
+}
