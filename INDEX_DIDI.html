@@ -366,6 +366,35 @@ input::placeholder,textarea::placeholder{color:#7b877d!important;}
 ::selection{background:#d9ad43;color:#08251d;}
 @media(prefers-reduced-motion:no-preference){.card,.quickTile,.btn,.bnav-item{transition:background .18s ease,transform .18s ease,box-shadow .18s ease}.quickTile:active,.btn:active{transform:scale(.98)}}
 
+
+/* DIdI — acabamento visual verde-esmeralda e dourado, inspirado na referência enviada */
+:root{--teal:#0F4A44;--teal-dark:#082F2B;--gold:#E3AC52;--gold-soft:#F7E6BE;--green:#087C50;--ink:#18352F;--cream:#FFF9ED;}
+body{background:linear-gradient(155deg,#061F1C 0%,#0F4A44 42%,#071C19 100%)!important;color:#F8F4E9!important;}
+header,.topbar,.appHeader,.bottomNav,.navBar,.tabbar{background:linear-gradient(180deg,#082F2B,#061F1C)!important;border-color:rgba(227,172,82,.55)!important;}
+.card,.panel,.modal,.sheet,.settingsCard,.listCard{border:1px solid rgba(227,172,82,.5)!important;border-radius:18px!important;box-shadow:0 7px 20px rgba(0,0,0,.22)!important;}
+.card{background:linear-gradient(145deg,#fffaf0,#f0f6ed)!important;color:#18352F!important;}
+.card h1,.card h2,.card h3,.card label,.card b{color:#123F36;}
+.btn{border-radius:14px!important;font-weight:700!important;}
+button.btn:not(.outline):not(.danger):not(.gold){background:linear-gradient(135deg,#13865A,#075B3D)!important;color:#fff!important;border:1px solid #E3AC52!important;}
+button.btn.gold,.gold{background:linear-gradient(135deg,#F9D47D,#D99A31)!important;color:#2D260F!important;border:1px solid #FFE7A6!important;}
+button.btn.outline{border:1px solid #B78A37!important;color:#0F4A44!important;background:#FFF9ED!important;}
+.agendaEvent{background:linear-gradient(135deg,#fffdf7,#eaf7ee)!important;border:1px solid #D6B15E!important;color:#18352F!important;border-radius:15px!important;}
+input,select,textarea{border-radius:11px!important;}
+.bottomNav button,.navBar button,.tabbar button{color:#F7E6BE!important;}
+.bottomNav button.active,.navBar button.active,.tabbar button.active{color:#E3AC52!important;}
+
+
+/* Ajustes solicitados: visual verde-esmeralda/dourado e personagem Didi */
+.didiWelcome{background:linear-gradient(125deg,#073b2b,#0b6041 65%,#123b30)!important;border:1px solid #d8ad4c!important;border-radius:18px!important;padding:12px!important;box-shadow:0 5px 18px #001b1250!important;color:#fff8e8!important;display:flex!important;align-items:center!important;gap:12px!important}
+.didiWelcome b,.didiWelcome span{color:#fff8e8!important}
+.didiAvatar{width:76px;height:82px;object-fit:cover;object-position:center 24%;border-radius:15px;border:2px solid #d8ad4c;flex:0 0 auto;background:#fff}
+.agendaFormHelp{font-size:12px;color:var(--muted,#64756d);margin:-4px 0 10px}
+#sheet input.agendaDateText,#sheet input.agendaTimeText,#sheet textarea.agendaText{width:100%;box-sizing:border-box;display:block;min-height:44px;padding:11px 12px;border-radius:11px;border:1px solid #b9cbbf;background:#fffdf8;color:#17382c;font:inherit;font-size:16px;opacity:1;pointer-events:auto;touch-action:manipulation}
+#sheet textarea.agendaText{min-height:94px;resize:vertical}
+#sheet .agendaFieldLabel{display:block;margin:10px 0 5px;font-weight:650;color:#17382c}
+.agendaEvent{background:linear-gradient(135deg,#fffdf7,#eaf7ee)!important;border:1px solid #d8ad4c!important;color:#17382c!important}
+.agendaEvent .agendaReminder{margin-top:7px;padding:8px;border-radius:9px;background:#f8efd7;color:#4a3a16;white-space:pre-wrap;overflow-wrap:anywhere}
+
 </style>
 </head>
 <body class="dark">
@@ -1482,7 +1511,7 @@ function renderSituacao(){
   const isComprometido = podeGastar<0;
   const ringPct = saldo!==0 ? Math.max(0,Math.min(100,pct)) : 0;
   return `
-  <section class="didiWelcome"><div class="welcomeMark">D</div><div><b>Olá, ${USER_NAME}! 👋</b><span>Eu sou a Didi. Vamos cuidar bem do seu dinheiro hoje?</span></div></section>
+  <section class="didiWelcome"><img class="didiAvatar" src="data:image/jpeg;base64,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" alt="Personagem Didi"><div><b>Olá, ${USER_NAME}! 👋</b><span>Eu sou a Didi. Vamos cuidar bem do seu dinheiro hoje?</span></div></section>
   <div class="quickTiles" aria-label="Atalhos rápidos">
     <button class="quickTile blue" onclick="fabAction()"><span>＋</span>Novo lançamento</button>
     <button class="quickTile purple" onclick="goTab('historico')"><span>▤</span>Histórico</button>
@@ -3238,22 +3267,42 @@ function restoreTrash(id){
 }
 
 /* ================= AGENDA DE COMPROMISSOS ================= */
+function formatarDataAgendaBR(valor){
+ if(!valor)return 'Data não informada';
+ const s=String(valor);
+ if(/^\d{4}-\d{2}-\d{2}$/.test(s)){const [a,m,d]=s.split('-');return `${d}/${m}/${a}`;}
+ return s;
+}
+function converterDataAgendaISO(valor){
+ const v=String(valor||'').trim();
+ let m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+ if(m){const d=Number(m[1]),mo=Number(m[2]),a=Number(m[3]);const dt=new Date(a,mo-1,d);if(dt.getFullYear()!==a||dt.getMonth()!==mo-1||dt.getDate()!==d)return '';return `${a}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
+ m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/);if(m)return v;
+ return '';
+}
 function renderAgendaCompromissos(){
-  if(!Array.isArray(state.agenda)) state.agenda=[];
-  const lista=state.agenda.slice().sort((a,b)=>String(a.data||a.date||'').localeCompare(String(b.data||b.date||'')));
-  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h2 style="margin:0 0 4px">Agenda de compromissos</h2><div class="muted">Seus horários e lembretes em um só lugar.</div></div><span style="font-size:30px">🗓️</span></div><button class="btn block" style="margin-top:14px" onclick="abrirNovoCompromisso()">＋ Novo compromisso</button></div>
-  <div class="card"><h3>Próximos compromissos</h3>${lista.length?lista.map((a,i)=>`<div class="agendaEvent"><div style="display:flex;justify-content:space-between;gap:8px"><b>${escapeHTML(String(a.titulo||a.desc||'Compromisso'))}</b><button class="btn small danger" onclick="excluirCompromissoAgenda(${i})">Excluir</button></div><div style="margin-top:5px">📅 ${escapeHTML(String(a.data||a.date||'Data não informada'))} ${a.hora?' · ⏰ '+escapeHTML(String(a.hora)):''}</div>${a.local?`<div>📍 ${escapeHTML(String(a.local))}</div>`:''}${a.obs?`<div class="muted" style="margin-top:5px">${escapeHTML(String(a.obs))}</div>`:''}</div>`).join(''):'<div class="emptyState">Sua agenda está vazia. Toque em “Novo compromisso” para adicionar um.</div>'}</div>`;
+ if(!Array.isArray(state.agenda)) state.agenda=[];
+ const lista=state.agenda.map((a,i)=>({...a,_originalIndex:i})).sort((a,b)=>String(a.data||a.date||'').localeCompare(String(b.data||b.date||'')));
+ return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h2 style="margin:0 0 4px">Minha agenda</h2><div class="muted">Cadastre o compromisso e escreva seu lembrete. Data no formato dia/mês/ano.</div></div><span style="font-size:30px">🗓️</span></div><button class="btn block" style="margin-top:14px" onclick="abrirNovoCompromisso()">＋ Adicionar compromisso</button><div class="agendaFormHelp" style="margin-top:8px">Lembretes previstos: um dia antes às 08h e no dia do compromisso no horário escolhido (ou às 08h, se não houver horário).</div></div>
+ <div class="card"><h3>Próximos compromissos</h3>${lista.length?lista.map(a=>`<div class="agendaEvent"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start"><b>${escapeHTML(String(a.titulo||a.desc||'Compromisso'))}</b><button class="btn small danger" onclick="excluirCompromissoAgenda(${a._originalIndex})">Excluir</button></div><div style="margin-top:7px">📅 ${escapeHTML(formatarDataAgendaBR(a.data||a.date))}${a.hora?' · ⏰ '+escapeHTML(String(a.hora)):''}</div>${a.local?`<div style="margin-top:5px">📍 ${escapeHTML(String(a.local))}</div>`:''}${(a.lembrete||a.obs)?`<div class="agendaReminder"><b>🔔 Lembrete:</b><br>${escapeHTML(String(a.lembrete||a.obs))}</div>`:''}</div>`).join(''):'<div class="emptyState">Sua agenda está vazia. Toque em “Adicionar compromisso” para começar.</div>'}</div>`;
 }
 function escapeHTML(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function abrirNovoCompromisso(){
- openSheet('Novo compromisso',`<label class="f">Compromisso</label><input id="agTitulo" class="f" placeholder="Ex.: consulta, reunião, aniversário"><label class="f">Data</label><input id="agData" class="f" type="date" value="${todayStr()}"><label class="f">Horário</label><input id="agHora" class="f" type="time"><label class="f">Local (opcional)</label><input id="agLocal" class="f" placeholder="Onde será?"><label class="f">Observações (opcional)</label><textarea id="agObs" class="f" rows="2" placeholder="Detalhes e lembretes"></textarea><button class="btn block" style="margin-top:14px" onclick="salvarNovoCompromisso()">Salvar compromisso</button>`);
+ const hoje=typeof todayStr==='function'?todayStr():new Date().toISOString().slice(0,10);
+ const [aa,mm,dd]=hoje.split('-');
+ openSheet('Adicionar compromisso',`<label class="agendaFieldLabel" for="agTitulo">Nome do compromisso *</label><input id="agTitulo" class="agendaText" type="text" placeholder="Ex.: consulta médica, reunião, aniversário" autocomplete="off"><label class="agendaFieldLabel" for="agData">Data do compromisso *</label><input id="agData" class="agendaDateText" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" value="${dd}/${mm}/${aa}" autocomplete="off"><div class="agendaFormHelp">Digite a data como dia/mês/ano. Exemplo: 25/10/2026.</div><label class="agendaFieldLabel" for="agHora">Horário (opcional)</label><input id="agHora" class="agendaTimeText" type="time"><label class="agendaFieldLabel" for="agLocal">Local (opcional)</label><input id="agLocal" class="agendaText" type="text" placeholder="Onde será?" autocomplete="off"><label class="agendaFieldLabel" for="agLembrete">Escreva seu lembrete</label><textarea id="agLembrete" class="agendaText" rows="4" placeholder="O que a Didi deve lembrar você? Ex.: levar documentos, ligar para Maria..."></textarea><button class="btn block" style="margin-top:14px" onclick="salvarNovoCompromisso()">💾 Salvar compromisso</button>`);
+ setTimeout(()=>{const d=document.getElementById('agData');if(d){d.addEventListener('input',()=>{let n=d.value.replace(/\D/g,'').slice(0,8);if(n.length>=5)n=n.slice(0,2)+'/'+n.slice(2,4)+'/'+n.slice(4);else if(n.length>=3)n=n.slice(0,2)+'/'+n.slice(2);d.value=n;});}},80);
 }
 function salvarNovoCompromisso(){
- const titulo=document.getElementById('agTitulo')?.value.trim(), data=document.getElementById('agData')?.value;
- if(!titulo||!data){toast('Informe o compromisso e a data.');return;}
+ const titulo=document.getElementById('agTitulo')?.value.trim();
+ const dataDigitada=document.getElementById('agData')?.value;
+ const data=converterDataAgendaISO(dataDigitada);
+ if(!titulo){toast('Digite o nome do compromisso.');document.getElementById('agTitulo')?.focus();return;}
+ if(!data){toast('Digite uma data válida no formato DD/MM/AAAA.');document.getElementById('agData')?.focus();return;}
+ const lembrete=document.getElementById('agLembrete')?.value.trim()||'';
  if(!Array.isArray(state.agenda))state.agenda=[];
- state.agenda.push({id:uid('ag'),titulo,data,hora:document.getElementById('agHora')?.value||'',local:document.getElementById('agLocal')?.value.trim()||'',obs:document.getElementById('agObs')?.value.trim()||'',criadoEm:Date.now()});
- save();closeSheet();render();toast('Compromisso salvo na agenda.');
+ state.agenda.push({id:uid('ag'),titulo,data,hora:document.getElementById('agHora')?.value||'',local:document.getElementById('agLocal')?.value.trim()||'',lembrete,obs:lembrete,criadoEm:Date.now(),lembreteDiaAnterior:false,lembreteNoDia:false});
+ save();closeSheet();render();toast('Compromisso e lembrete salvos na agenda.');
 }
 function excluirCompromissoAgenda(i){if(!Array.isArray(state.agenda)||!state.agenda[i])return;if(!confirm('Excluir este compromisso da agenda?'))return;state.agenda.splice(i,1);save();render();toast('Compromisso excluído.');}
 /* ================= VIAGENS ================= */
@@ -4055,6 +4104,46 @@ if('serviceWorker' in navigator){
 function handleQuickAction(){
   const params = new URLSearchParams(window.location.search);
   if(params.get('action')==='quickadd'){ setTimeout(()=>openLancForm(), 300); }
+}
+
+
+/* ================= LEMBRETES DA AGENDA DIdI =================
+   Avisa no dia anterior às 08:00 e no dia do compromisso no horário marcado
+   (ou às 08:00 quando não houver horário). Funciona enquanto o app estiver aberto.
+*/
+function didiAgendaDateLocal(date){
+  const d=String(date||'').slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d)?d:'';
+}
+function didiAgendaReminderCheck(){
+  try{
+    if(!state || !Array.isArray(state.agenda) || !state.agenda.length) return;
+    const now=new Date();
+    const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+    const hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    for(const a of state.agenda){
+      const date=didiAgendaDateLocal(a.data||a.date); if(!date) continue;
+      const title=String(a.titulo||a.desc||'Compromisso');
+      const id=String(a.id||title+'_'+date+'_'+String(a.hora||''));
+      const dayBefore=new Date(date+'T12:00:00'); dayBefore.setDate(dayBefore.getDate()-1);
+      const prev=[dayBefore.getFullYear(),String(dayBefore.getMonth()+1).padStart(2,'0'),String(dayBefore.getDate()).padStart(2,'0')].join('-');
+      const remindTime=String(a.hora||'08:00').slice(0,5);
+      if(today===prev && hhmm==='08:00'){
+        const key='didi_agenda_v1_'+id+'_v1_'+today;
+        if(!localStorage.getItem(key)){localStorage.setItem(key,'1');fireNotify('Lembrete para amanhã',title+(a.hora?' às '+a.hora:'')+(a.local?' · '+a.local:'')+'. Confira sua agenda.');}
+      }
+      if(today===date && hhmm===remindTime){
+        const key='didi_agenda_v1_'+id+'_dia_'+today;
+        if(!localStorage.getItem(key)){localStorage.setItem(key,'1');fireNotify('Compromisso de hoje',title+(a.hora?' às '+a.hora:'')+(a.local?' · '+a.local:'')+'. Não se esqueça!');}
+      }
+    }
+  }catch(e){console.warn('Lembretes da agenda:',e);}
+}
+if(!window.__didiAgendaReminderTimer){
+  window.__didiAgendaReminderTimer=setInterval(didiAgendaReminderCheck,30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)didiAgendaReminderCheck();});
+  window.addEventListener('focus',didiAgendaReminderCheck);
+  setTimeout(didiAgendaReminderCheck,1800);
 }
 
 </script>
