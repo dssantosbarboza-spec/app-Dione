@@ -138,7 +138,7 @@ input.f,select.f,textarea.f{width:100%;padding:11px;border-radius:10px;border:1p
 .calDay.today{border-color:var(--gold);border-width:2px;}
 .calDay .dots{display:flex;gap:2px;position:absolute;bottom:4px;}
 .dot{width:5px;height:5px;border-radius:50%;}
-.dot.inc{background:var(--green);} .dot.exp{background:var(--red);} .dot.card{background:var(--gold);}
+.dot.inc{background:var(--green);} .dot.exp{background:var(--red);} .dot.dot.card{background:var(--gold);}
 .linkline{background:none;border:none;color:var(--teal);font-size:13px;font-weight:600;text-decoration:underline;padding:6px 0;}
 .alertItem{display:flex;gap:10px;padding:12px;border-radius:12px;margin-bottom:8px;}
 .alertItem.warn{background:var(--gold-soft);} .alertItem.danger{background:var(--red-soft);} .alertItem.info{background:var(--green-soft);}
@@ -185,6 +185,135 @@ input.f:focus,select.f:focus,textarea.f:focus,.lockCard input:focus{outline:2px 
 .quickTile span{font-size:23px;line-height:1}
 .quickTile.blue{background:linear-gradient(145deg,#2588e8,#0752b5)}.quickTile.purple{background:linear-gradient(145deg,#b44df4,#7622bc)}.quickTile.orange{background:linear-gradient(145deg,#ffae26,#e96b08)}.quickTile.green{background:linear-gradient(145deg,#20b85c,#08793d)}.quickTile.red{background:linear-gradient(145deg,#ff645b,#d8202b)}.quickTile.gold{background:linear-gradient(145deg,#ffdf55,#efa800);color:#203c28}
 @media(min-width:520px){main{max-width:720px;margin:0 auto;width:100%}.didiWelcome{padding:20px}.quickTile{min-height:88px;font-size:12px}}
+
+
+/* CONTRASTE CORRIGIDO: impede cartões claros com texto branco herdado */
+#content .card,
+#content .sheetBody,
+#content .emptyState,
+#content .row,
+#content .menuRow,
+#content .calDay,
+#content .suggestChip {
+  color: var(--ink) !important;
+}
+#content .card {
+  background: var(--panel) !important;
+  border-color: var(--line) !important;
+}
+#content .card h3,
+#content .card .muted,
+#content .card small,
+#content .card label,
+#content .card p,
+#content .card span:not(.dot):not(.mi),
+#content .card div:not(.didiAvatar):not(.quickTile) {
+  color: inherit;
+}
+#content input, #content select, #content textarea {
+  background: #fffdf7 !important;
+  color: #1a2b27 !important;
+  border-color: #c9b98f !important;
+}
+#content .quickTile { color: #fff !important; }
+#content .quickTile.gold { color: #203c28 !important; }
+#content .didiWelcome, #content .didiHeader { color: #fff !important; }
+#content .didiWelcome span { color: #e0eee4 !important; }
+#content .chatBubble.user { color: #fff !important; }
+#content .chatBubble.didi { color: #1a2b27 !important; }
+/* Cartões coloridos e diferenciados, mantendo contraste de leitura */
+#content .quickTile.blue { background: linear-gradient(145deg,#2588e8,#0752b5) !important; }
+#content .quickTile.purple { background: linear-gradient(145deg,#b44df4,#7622bc) !important; }
+#content .quickTile.orange { background: linear-gradient(145deg,#ffae26,#e96b08) !important; }
+#content .quickTile.green { background: linear-gradient(145deg,#20b85c,#08793d) !important; }
+#content .quickTile.gold { background: linear-gradient(145deg,#ffdf55,#efa800) !important; }
+
+
+/* CORREÇÃO DE CONTRASTE DIDI - regras finais para prevalecer sobre estilos antigos */
+:root{color-scheme:light;}
+body:not(.dark) .card, body:not(.dark) .lockCard, body:not(.dark) .chatBubble.didi, body:not(.dark) .expenseRow, body:not(.dark) .menuRow{color:#183b34;}
+body:not(.dark) .card{background:linear-gradient(145deg,#fffdf7 0%,#e8f5ef 100%);border:1px solid #c9e4d8;box-shadow:0 5px 16px rgba(16,75,62,.08);}
+body:not(.dark) .card h3, body:not(.dark) .card .muted, body:not(.dark) .card .expenseMeta{color:#49665f;}
+body:not(.dark) .card .big, body:not(.dark) .card strong, body:not(.dark) .card b, body:not(.dark) .card p, body:not(.dark) .card span:not(.pill):not(.mi), body:not(.dark) .card div:not(.pill){color:inherit;}
+body:not(.dark) .card .pill.green{background:#d8f3e6;color:#176747;}
+body:not(.dark) .card .pill.red{background:#ffe1e5;color:#a3233b;}
+body:not(.dark) .card .pill.gold{background:#fff0cf;color:#80540c;}
+body:not(.dark) input,body:not(.dark) select,body:not(.dark) textarea{background:#fffdf8;color:#183b34;border-color:#b9d4c9;}
+body.dark .card{background:linear-gradient(145deg,#17463f 0%,#12332f 100%);color:#f5f5ed;border:1px solid #2c655a;}
+body.dark .card h3,body.dark .card .muted{color:#c1d8d1;}
+.chatBubble.didi{background:#e8f5ef;color:#183b34;border:1px solid #c9e4d8;}
+.chatBubble.user{background:#0f766e;color:#fff;}
+/* Mantém a identidade colorida sem esconder o conteúdo dos cartões */
+.bottomnav{box-shadow:0 -4px 16px rgba(16,75,62,.08);}
+
+
+/* CORREÇÃO REAL DOS POP-UPS: #sheet fica fora de #content */
+#sheet .sheetBody{background:#FFFDF7 !important;color:#18352F !important;border:1px solid #D8C69C !important;box-shadow:0 -12px 40px rgba(0,0,0,.22)}
+#sheet .sheetBody *{color:#18352F !important;}
+#sheet .sheetBody h1,#sheet .sheetBody h2,#sheet .sheetBody h3,#sheet .sheetBody b,#sheet .sheetBody strong{color:#0F4A44 !important;}
+#sheet .sheetBody .muted,#sheet .sheetBody label.f,#sheet .sheetBody .sheetHead .x{color:#526A62 !important;}
+#sheet .sheetBody input,#sheet .sheetBody select,#sheet .sheetBody textarea,
+#sheet .sheetBody input.f,#sheet .sheetBody select.f,#sheet .sheetBody textarea.f{background:#FFFFFF !important;color:#172B26 !important;border:1px solid #B7C8BE !important;caret-color:#0F4A44 !important;}
+#sheet .sheetBody input::placeholder,#sheet .sheetBody textarea::placeholder{color:#687A73 !important;opacity:1 !important;}
+#sheet .sheetBody button.btn{background:#0F4A44 !important;color:#FFFFFF !important;border-color:transparent !important;}
+#sheet .sheetBody button.btn.gold{background:#E3AC52 !important;color:#2D260F !important;}
+#sheet .sheetBody button.btn.danger{background:#C83D4D !important;color:#FFFFFF !important;}
+#sheet .sheetBody .pill.green{background:#DFF3EA !important;color:#176747 !important;}
+#sheet .sheetBody .pill.red{background:#FBE1E4 !important;color:#9D2534 !important;}
+#sheet .sheetBody .tabs button.active{background:#0F4A44 !important;color:#FFFFFF !important;}
+#sheet .sheetBody .tabs button{background:#F3EFE4 !important;color:#38554B !important;}
+#sheet .sheetBody .row{color:#18352F !important;border-color:#E4DDCE !important;}
+#sheet .sheetBody [style*="color:#fff"],#sheet .sheetBody [style*="color: #fff"],#sheet .sheetBody [style*="color:white"]{color:#18352F !important;}
+#sheet .sheetBody .btn[style*="background:var(--teal)"],#sheet .sheetBody .btn[style*="background: var(--teal)"]{background:#0F4A44 !important;color:#FFFFFF !important;}
+/* Aparência mais viva no conteúdo principal, sem alterar a estrutura nem os dados. */
+#content .card{border:1px solid #DCD4C1 !important;box-shadow:0 4px 14px rgba(15,74,68,.07) !important;}
+#content .card h3{color:#0F6A5C !important;}
+#content .card:nth-of-type(3n+1){border-top:4px solid #1F9A72 !important;}
+#content .card:nth-of-type(3n+2){border-top:4px solid #C98A2E !important;}
+#content .card:nth-of-type(3n){border-top:4px solid #4587C9 !important;}
+body.dark #sheet .sheetBody{background:#173B34 !important;color:#F7F1E5 !important;}
+body.dark #sheet .sheetBody *{color:#F7F1E5 !important;}
+body.dark #sheet .sheetBody input,body.dark #sheet .sheetBody select,body.dark #sheet .sheetBody textarea{background:#F7F1E5 !important;color:#18352F !important;}
+body.dark #sheet .sheetBody .muted,body.dark #sheet .sheetBody label.f{color:#C1D6CC !important;}
+
+
+/* CORRECAO DE CONTRASTE DEFINITIVA: pop-ups e conversa da Didi */
+#sheet.formSheet, .formSheet{color:#18352F}
+#sheet .sheetBody{background:#FFFDF7!important;color:#18352F!important;}
+#sheet .sheetBody *:not(.btn):not(button){color:#18352F;}
+#sheet .sheetBody .muted, #sheet .sheetBody label.f{color:#526A62!important;}
+#sheet .sheetBody input, #sheet .sheetBody select, #sheet .sheetBody textarea{background:#FFFFFF!important;color:#172B26!important;-webkit-text-fill-color:#172B26!important;}
+#sheet .sheetBody input::placeholder,#sheet .sheetBody textarea::placeholder{color:#687A73!important;opacity:1!important;}
+#content .chatBubble.didi{background:#FFFDF7!important;color:#17352B!important;border:1px solid #E4D8BE!important;}
+#content .chatBubble.didi *{color:#17352B!important;}
+#content .chatBubble.user{background:#075A3C!important;color:#FFFFFF!important;}
+#content .chatInputBar input{background:#FFFFFF!important;color:#172B26!important;-webkit-text-fill-color:#172B26!important;}
+#content .chatInputBar input::placeholder{color:#687A73!important;opacity:1!important;}
+.voiceTestBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 4px 10px}
+.voiceTestBar .btn{min-height:38px}
+.agendaEvent{padding:12px;border-radius:14px;background:linear-gradient(135deg,#fffdf7,#eaf7ee);border:1px solid #d6e8d8;margin:8px 0;color:#18352f}
+.travelHero{border-radius:18px;padding:18px;background:linear-gradient(135deg,#075a3c,#033322);color:#fff;margin-bottom:12px}
+@media(prefers-color-scheme:dark){body.dark #content .chatBubble.didi{background:#173B34!important;color:#F7F1E5!important;border-color:#38685b!important}body.dark #content .chatBubble.didi *{color:#F7F1E5!important}body.dark #sheet .sheetBody{background:#173B34!important;color:#F7F1E5!important}body.dark #sheet .sheetBody *:not(.btn):not(button){color:#F7F1E5!important}body.dark #sheet .sheetBody input,body.dark #sheet .sheetBody select,body.dark #sheet .sheetBody textarea{background:#F7F1E5!important;color:#18352F!important;-webkit-text-fill-color:#18352F!important}}
+
+/* PATCH DE CONTRASTE DIRETO: mensagens e janelas flutuantes */
+#sheet.formSheet.show { background:rgba(0,0,0,.58)!important; }
+#sheet .sheetBody, #sheet .sheetBody *:not(svg):not(path) { color:#18352F!important; }
+#sheet .sheetBody { background:#FFFDF7!important; color:#18352F!important; }
+#sheet .sheetBody input, #sheet .sheetBody select, #sheet .sheetBody textarea { background:#FFFFFF!important; color:#172B26!important; -webkit-text-fill-color:#172B26!important; }
+#sheet .sheetBody input::placeholder, #sheet .sheetBody textarea::placeholder { color:#687A73!important; -webkit-text-fill-color:#687A73!important; opacity:1!important; }
+#sheet .sheetBody button.btn { background:#0F4A44!important; color:#FFFFFF!important; -webkit-text-fill-color:#FFFFFF!important; }
+#sheet .sheetBody button.btn.gold { background:#E3AC52!important; color:#2D260F!important; -webkit-text-fill-color:#2D260F!important; }
+#content .chatBubble.didi { background:#FFFDF7!important; color:#17352B!important; -webkit-text-fill-color:#17352B!important; border:1px solid #D8C9A9!important; }
+#content .chatBubble.didi * { color:#17352B!important; -webkit-text-fill-color:#17352B!important; }
+#content .chatBubble.user { background:#075A3C!important; color:#FFFFFF!important; -webkit-text-fill-color:#FFFFFF!important; }
+#content .chatInputBar input { background:#FFFFFF!important; color:#172B26!important; -webkit-text-fill-color:#172B26!important; }
+#content .voiceTestBar {display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;margin:0 4px 8px;border:1px solid #D8C9A9;border-radius:12px;background:#FFFDF7;color:#18352F!important}
+#content .voiceTestBar * {color:#18352F!important}
+body.dark #sheet .sheetBody {background:#173B34!important;color:#F7F1E5!important}
+body.dark #sheet .sheetBody *:not(input):not(select):not(textarea):not(button) {color:#F7F1E5!important;-webkit-text-fill-color:#F7F1E5!important}
+body.dark #sheet .sheetBody input,body.dark #sheet .sheetBody select,body.dark #sheet .sheetBody textarea {background:#F7F1E5!important;color:#18352F!important;-webkit-text-fill-color:#18352F!important}
+body.dark #content .chatBubble.didi {background:#173B34!important;color:#F7F1E5!important;-webkit-text-fill-color:#F7F1E5!important;border-color:#38685b!important}
+body.dark #content .chatBubble.didi * {color:#F7F1E5!important;-webkit-text-fill-color:#F7F1E5!important}
 
 </style>
 </head>
@@ -854,6 +983,8 @@ const NAV = [
   {id:"projecao", label:"Projeção do próximo mês", ic:"🔮"},
   {id:"historico", label:"Histórico", ic:"🕘"},
   {id:"calendario", label:"Calendário", ic:"📅"},
+  {id:"agenda", label:"Agenda", ic:"🗓️"},
+  {id:"viagens", label:"Viagens", ic:"🧳"},
   {id:"relatorios", label:"Relatórios", ic:"📊"},
   {id:"fechamento", label:"Fechamento mensal", ic:"📁"},
   {id:"didi", label:"Didi", ic:"🤖"},
@@ -1133,7 +1264,7 @@ function render(){
     emprestimo: renderEmprestimo, caixinhas: renderCaixinhas, previsao: renderPrevisao,
     projecao: renderProjecao, historico: renderHistorico, calendario: renderCalendario,
     relatorios: renderRelatorios, fechamento: renderFechamento,
-    didi: renderDidiChatScreen, mais: renderMais,
+    didi: renderDidiChatScreen, agenda: renderAgendaCompromissos, viagens: renderViagens, mais: renderMais,
   };
   c.innerHTML = (readOnlyMode ? '<div style="background:var(--gold);color:#3a2b06;text-align:center;padding:8px;font-weight:600;font-size:13px;border-radius:10px;margin-bottom:10px">👀 Modo somente leitura — você está vendo, mas não pode editar</div>' : '') + renderers[currentTab]();
   const fab = document.getElementById('fabBtn');
@@ -1222,6 +1353,7 @@ function renderDidiChatScreen(){
       <button onclick="confirmarLimparConversa()" style="background:none;border:none;color:#fff;font-size:18px;opacity:.85">🗑️</button>
     </div>
     ${renderDidiVoiceStatusBar()}
+    <div class="voiceTestBar"><button class="btn" onclick="testarVozDidi()">🔊 Testar voz da Didi</button><span class="muted">Toque aqui para liberar e testar o áudio.</span></div>
     <div class="chatRow" id="didiChatRow" style="min-height:280px;max-height:calc(100vh - 380px)">${bubbles}</div>
     <div style="padding:0 4px 6px">
       <span class="suggestChip" onclick="enviarSugestaoChat('Quanto eu tenho?')">Quanto eu tenho?</span>
@@ -1248,12 +1380,28 @@ function enviarMensagemChat(){
   const text = input.value.trim();
   if(!text) return;
   input.value = '';
+  const antes = didiChatHistory.length;
+  window.__didiFalouNestaResposta = false;
   pushDidiBubble('user', text);
   processarFalaDidi(text);
+  falarUltimaRespostaSeNecessario(antes);
 }
 function enviarSugestaoChat(text){
+  const antes = didiChatHistory.length;
+  window.__didiFalouNestaResposta = false;
   pushDidiBubble('user', text);
   processarFalaDidi(text.toLowerCase());
+  falarUltimaRespostaSeNecessario(antes);
+}
+function falarUltimaRespostaSeNecessario(antes){
+  const inicio=Date.now();
+  const tentar=()=>setTimeout(()=>{
+    if(window.__didiFalouNestaResposta) return;
+    const resposta=[...didiChatHistory].reverse().find(m=>m.role==='didi'&&m.texto&&m.ts>=inicio-1000);
+    if(resposta){ window.__didiFalouNestaResposta=true; falarInterno(resposta.texto,false); return; }
+    if(Date.now()-inicio<5000) tentar();
+  },300);
+  tentar();
 }
 
 /* ================= SITUAÇÃO ================= */
@@ -1288,8 +1436,8 @@ function renderSituacao(){
     <button class="quickTile blue" onclick="fabAction()"><span>＋</span>Novo lançamento</button>
     <button class="quickTile purple" onclick="goTab('historico')"><span>▤</span>Histórico</button>
     <button class="quickTile orange" onclick="goTab('cartoes')"><span>▣</span>Cartões</button>
-    <button class="quickTile green" onclick="goTab('calendario')"><span>▦</span>Calendário</button>
-    <button class="quickTile blue" onclick="goTab('relatorios')"><span>▥</span>Relatórios</button>
+    <button class="quickTile green" onclick="goTab('agenda')"><span>🗓️</span>Agenda</button>
+    <button class="quickTile blue" onclick="goTab('viagens')"><span>✈️</span>Viagens</button>
     <button class="quickTile gold" onclick="goTab('mais')"><span>⠿</span>Mais opções</button>
   </div>
   <div class="card" style="padding:20px 18px 24px;margin:0 0 10px;border:none;border-radius:24px;background:linear-gradient(180deg,var(--teal-dark) 0%, #075a3c 62%, var(--bg) 100%);color:#F4F1E8">
@@ -1543,91 +1691,109 @@ function falarEescutarDeNovo(texto){
   falarInterno(texto, true);
 }
 function falarInterno(texto, continuarEscutando){
+  window.__didiFalouNestaResposta = true;
   const mensagem = String(texto == null ? '' : texto).trim();
   if(!mensagem) return;
   toast(mensagem);
   pushDidiBubble('didi', mensagem);
 
-  const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
-  if(!synth || typeof window.SpeechSynthesisUtterance === 'undefined'){
-    setDidiVoiceState('idle');
-    toast('A fala não está disponível neste navegador. Confira a conversão de texto em fala do Android.');
-    if(continuarEscutando && didiConversaAtiva && !didiPausado) setTimeout(()=>startVoiceQuery(true),700);
-    return;
-  }
-
-  let finalizado = false;
+  let concluido = false;
+  let tentouVozPadrao = false;
   let watchdog = null;
-  let tentativas = 0;
+  const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+
   const seguir = ()=>{
-    if(finalizado) return;
-    finalizado = true;
+    if(concluido) return;
+    concluido = true;
     if(watchdog) clearTimeout(watchdog);
     if(continuarEscutando && didiConversaAtiva && !didiPausado){
-      setTimeout(()=>startVoiceQuery(true),800);
+      setTimeout(()=>startVoiceQuery(true), 350);
     } else {
       setDidiVoiceState(didiConversaAtiva ? 'pausado' : 'idle');
     }
   };
 
-  const tentarFalar = ()=>{
-    if(finalizado) return;
-    tentativas++;
+  if(!synth || typeof window.SpeechSynthesisUtterance === 'undefined'){
+    setDidiVoiceState('idle');
+    toast('A leitura em voz alta não está disponível neste navegador. Confira as permissões e a saída de áudio do aparelho.');
+    seguir();
+    return;
+  }
+
+  const falar = (usarVozSelecionada)=>{
+    if(concluido) return;
     try{
-      const utter = new window.SpeechSynthesisUtterance(mensagem);
+      const utter = new SpeechSynthesisUtterance(mensagem);
       utter.lang = 'pt-BR';
       utter.rate = 0.96;
       utter.pitch = 1;
       utter.volume = 1;
-      // Não fixar uma voz específica: algumas vozes instaladas falham no PWA Android.
+      const voz = usarVozSelecionada ? melhorVozPtBR() : null;
+      if(voz) utter.voice = voz;
+
       utter.onstart = ()=>{
         setDidiVoiceState('falando');
         if(watchdog) clearTimeout(watchdog);
+        // Margem proporcional ao tamanho da resposta; evita retomar o microfone
+        // enquanto a Didi ainda está falando.
         watchdog = setTimeout(()=>{
-          if(finalizado) return;
-          if(!synth.speaking && !synth.pending) seguir();
-        }, Math.max(20000, mensagem.length * 300));
+          if(!concluido && !synth.speaking && !synth.pending) seguir();
+        }, Math.max(15000, mensagem.length * 180));
       };
       utter.onend = seguir;
-      utter.onerror = (ev)=>{
-        if(finalizado) return;
-        if(tentativas < 3){
-          // Recupera a fila antes da próxima tentativa; evita cancelar a fala nova.
-          setTimeout(()=>{ try{ synth.resume(); }catch(e){} tentarFalar(); }, 500 * tentativas);
-        } else {
-          toast('A resposta apareceu, mas o motor de voz do Android recusou o áudio.');
-          seguir();
+      utter.onerror = (event)=>{
+        // Alguns aparelhos Android falham com uma voz específica. Tenta uma vez
+        // com a voz padrão do navegador antes de desistir.
+        if(!tentouVozPadrao && usarVozSelecionada && event && event.error !== 'canceled' && event.error !== 'interrupted'){
+          tentouVozPadrao = true;
+          setTimeout(()=>falar(false), 180);
+          return;
         }
+        seguir();
       };
-      // Não executar cancel() antes de cada fala: isso pode abortar a própria fila
-      // de síntese em alguns navegadores instalados como aplicativo.
-      try{ synth.resume(); }catch(e){}
+
+      setDidiVoiceState('falando');
+      synth.resume();
       synth.speak(utter);
-      watchdog = setTimeout(()=>{
-        if(finalizado) return;
-        if(!synth.speaking && !synth.pending){
-          if(tentativas < 3){
-            setTimeout(()=>{ try{ synth.resume(); }catch(e){} tentarFalar(); }, 400);
-          } else {
-            toast('A DIdI não conseguiu iniciar o áudio.');
-            seguir();
-          }
+
+      // Alguns navegadores Android ficam com a fila de fala suspensa após cancel().
+      setTimeout(()=>{
+        if(!concluido && (synth.pending || synth.speaking)) synth.resume();
+        else if(!concluido && didiVoiceState === 'falando' && !synth.speaking && !synth.pending){
+          // Dá tempo para o motor de voz iniciar antes de considerar falha.
+          setTimeout(()=>{
+            if(!concluido && !synth.speaking && !synth.pending && !tentouVozPadrao){
+              tentouVozPadrao = true;
+              falar(false);
+            } else if(!concluido && !synth.speaking && !synth.pending) seguir();
+          }, 900);
         }
-      }, 2500);
-    }catch(err){
-      if(tentativas < 3) setTimeout(tentarFalar,500);
-      else { toast('Não foi possível iniciar o áudio da DIdI.'); seguir(); }
+      }, 300);
+    }catch(e){
+      if(!tentouVozPadrao && usarVozSelecionada){
+        tentouVozPadrao = true;
+        setTimeout(()=>falar(false), 180);
+      } else {
+        seguir();
+      }
     }
   };
 
-  // Se havia uma fala antiga presa, limpa somente nesse caso.
   try{
     if(synth.speaking || synth.pending) synth.cancel();
-  }catch(e){}
-  setTimeout(()=>{ try{ synth.resume(); }catch(e){} tentarFalar(); },150);
+    // Retoma o motor após cancelamento e tenta falar depois que a fila for limpa.
+    try { synth.resume(); } catch(e) {}
+    // Pequeno intervalo após cancel() ajuda o Chrome Android a iniciar a próxima fala.
+    setTimeout(()=>{
+      if(concluido) return;
+      try{ synth.resume(); }catch(e){}
+      if(!_cachedVoices.length) loadVoicesCache();
+      falar(true);
+    }, 180);
+  }catch(e){
+    falar(false);
+  }
 }
-
-
 function registrarLancamentoDireto({type, amount, desc, category, date, status, installments}){
   snapshot();
   const cat = category || (type==='saida' ? 'Outras despesas' : 'Outras entradas');
@@ -1904,7 +2070,7 @@ function startVoiceQuery(auto){
     toast(`🎙️ Ouvi: "${heard}"`);
     pushDidiBubble('user', heard);
     setDidiVoiceState('pensando');
-    setTimeout(()=>processarFalaDidi(heard), 900);
+    setTimeout(()=>{ const antes=didiChatHistory.length; window.__didiFalouNestaResposta=false; processarFalaDidi(heard); falarUltimaRespostaSeNecessario(antes); }, 900);
   };
   rec.onerror = ()=>{ toast('A Didi não entendeu. Tente de novo.'); setDidiVoiceState(didiConversaAtiva?'pausado':'idle'); if(didiConversaAtiva) didiPausado=true; };
   rec.onend = ()=>{ if(didiVoiceState==='escutando') setDidiVoiceState(didiConversaAtiva && !didiPausado ? 'pensando' : 'idle'); };
@@ -1925,6 +2091,38 @@ function melhorVozPtBR(){
       || ptVozes.find(v=>v.lang.toLowerCase()==='pt-br')
       || ptVozes[0]
       || null;
+}
+function testarVozDidi(){
+  const frase = `Olá, Jonny! Este é o teste de voz da Didi.`;
+  const synth = window.speechSynthesis;
+  if(!synth || typeof window.SpeechSynthesisUtterance === 'undefined'){
+    setDidiVoiceState('idle');
+    toast('ERRO DE VOZ: este navegador não disponibilizou speechSynthesis. Abra este app no Google Chrome atualizado.');
+    return;
+  }
+  try {
+    // Executa speak diretamente no toque do usuário, sem setTimeout, para respeitar a ativação do Android.
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(frase);
+    utter.lang = 'pt-BR'; utter.rate = 0.92; utter.pitch = 1; utter.volume = 1;
+    const voz = melhorVozPtBR(); if(voz) utter.voice = voz;
+    utter.onstart = () => { setDidiVoiceState('falando'); toast('A voz da Didi iniciou.'); };
+    utter.onend = () => { setDidiVoiceState(didiConversaAtiva ? 'pausado' : 'idle'); };
+    utter.onerror = (e) => { setDidiVoiceState('idle'); toast('FALHA DE VOZ: '+((e && e.error) || 'erro do mecanismo de fala')+'.'); };
+    synth.resume();
+    synth.speak(utter);
+    // Alguns WebViews deixam a fila pausada; retomar sem recriar a fala.
+    setTimeout(() => { try { synth.resume(); } catch(e) {} }, 250);
+    setTimeout(() => {
+      if(!synth.speaking && !synth.pending && didiVoiceState==='falando') {
+        setDidiVoiceState('idle');
+        toast('A fala não começou. O WebView/atalho pode estar bloqueando a síntese de voz.');
+      }
+    }, 1800);
+  } catch(e) {
+    setDidiVoiceState('idle');
+    toast('ERRO AO INICIAR A VOZ: '+(e && e.message ? e.message : 'falha desconhecida'));
+  }
 }
 function falarComoAle(texto){
   falarInterno(texto, didiConversaAtiva);
@@ -1993,7 +2191,7 @@ function enviarPrevistoWhatsApp(){
   if(!window._lastWhatsPrevisto){ toast('Gere a lista primeiro'); return; }
   window.open(`https://wa.me/?text=${encodeURIComponent(window._lastWhatsPrevisto)}`, '_blank');
 }
-const USER_NAME = 'Jhony';
+const USER_NAME = 'Jonny';
 function answerVoiceQuery(text){
   if(/\b(bom dia|boa tarde|boa noite)\b/.test(text) || /^(oi|ol[aá])( didi)?[\s!.]*$/.test(text.trim())){
     const hour = new Date().getHours();
@@ -2960,6 +3158,36 @@ function restoreTrash(id){
   runAuto();
   render(); toast("Restaurado");
 }
+
+/* ================= AGENDA DE COMPROMISSOS ================= */
+function renderAgendaCompromissos(){
+  if(!Array.isArray(state.agenda)) state.agenda=[];
+  const lista=state.agenda.slice().sort((a,b)=>String(a.data||a.date||'').localeCompare(String(b.data||b.date||'')));
+  return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><h2 style="margin:0 0 4px">Agenda de compromissos</h2><div class="muted">Seus horários e lembretes em um só lugar.</div></div><span style="font-size:30px">🗓️</span></div><button class="btn block" style="margin-top:14px" onclick="abrirNovoCompromisso()">＋ Novo compromisso</button></div>
+  <div class="card"><h3>Próximos compromissos</h3>${lista.length?lista.map((a,i)=>`<div class="agendaEvent"><div style="display:flex;justify-content:space-between;gap:8px"><b>${escapeHTML(String(a.titulo||a.desc||'Compromisso'))}</b><button class="btn small danger" onclick="excluirCompromissoAgenda(${i})">Excluir</button></div><div style="margin-top:5px">📅 ${escapeHTML(String(a.data||a.date||'Data não informada'))} ${a.hora?' · ⏰ '+escapeHTML(String(a.hora)):''}</div>${a.local?`<div>📍 ${escapeHTML(String(a.local))}</div>`:''}${a.obs?`<div class="muted" style="margin-top:5px">${escapeHTML(String(a.obs))}</div>`:''}</div>`).join(''):'<div class="emptyState">Sua agenda está vazia. Toque em “Novo compromisso” para adicionar um.</div>'}</div>`;
+}
+function escapeHTML(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function abrirNovoCompromisso(){
+ openSheet('Novo compromisso',`<label class="f">Compromisso</label><input id="agTitulo" class="f" placeholder="Ex.: consulta, reunião, aniversário"><label class="f">Data</label><input id="agData" class="f" type="date" value="${todayStr()}"><label class="f">Horário</label><input id="agHora" class="f" type="time"><label class="f">Local (opcional)</label><input id="agLocal" class="f" placeholder="Onde será?"><label class="f">Observações (opcional)</label><textarea id="agObs" class="f" rows="2" placeholder="Detalhes e lembretes"></textarea><button class="btn block" style="margin-top:14px" onclick="salvarNovoCompromisso()">Salvar compromisso</button>`);
+}
+function salvarNovoCompromisso(){
+ const titulo=document.getElementById('agTitulo')?.value.trim(), data=document.getElementById('agData')?.value;
+ if(!titulo||!data){toast('Informe o compromisso e a data.');return;}
+ if(!Array.isArray(state.agenda))state.agenda=[];
+ state.agenda.push({id:uid('ag'),titulo,data,hora:document.getElementById('agHora')?.value||'',local:document.getElementById('agLocal')?.value.trim()||'',obs:document.getElementById('agObs')?.value.trim()||'',criadoEm:Date.now()});
+ save();closeSheet();render();toast('Compromisso salvo na agenda.');
+}
+function excluirCompromissoAgenda(i){if(!Array.isArray(state.agenda)||!state.agenda[i])return;if(!confirm('Excluir este compromisso da agenda?'))return;state.agenda.splice(i,1);save();render();toast('Compromisso excluído.');}
+/* ================= VIAGENS ================= */
+function renderViagens(){
+ const v=state.viagem&&typeof state.viagem==='object'?state.viagem:null;
+ return `<div class="travelHero"><div style="font-size:34px">🧳</div><h2 style="color:#fff;margin:6px 0">Minhas viagens</h2><div style="opacity:.9">Organize destino, datas, hospedagem e roteiro.</div><button class="btn gold" style="margin-top:14px" onclick="abrirPlanejamentoViagem()">${v?'✏️ Editar viagem':'＋ Planejar viagem'}</button></div>
+ ${v?`<div class="card"><h3>${escapeHTML(String(v.destino||'Viagem planejada'))}</h3><div>📅 ${escapeHTML(String(v.saida||'Data a definir'))} até ${escapeHTML(String(v.volta||'Data a definir'))}</div>${v.hospedagem?`<div style="margin-top:8px">🏨 ${escapeHTML(String(v.hospedagem))}</div>`:''}${v.transporte?`<div style="margin-top:8px">🚗 ${escapeHTML(String(v.transporte))}</div>`:''}${v.roteiro?`<hr class="sep"><b>Roteiro e observações</b><p style="white-space:pre-wrap">${escapeHTML(String(v.roteiro))}</p>`:''}<button class="btn outline block" onclick="limparViagem()">Limpar planejamento</button></div>`:`<div class="card"><div class="emptyState">Você ainda não tem uma viagem planejada. Cadastre o destino e as datas para guardar seu roteiro aqui.</div></div>`}
+ <div class="card"><b>Quer ajuda com o roteiro?</b><p class="muted">Depois de salvar destino e datas, peça à Didi sugestões de passeios, deslocamentos e organização dos dias.</p><button class="btn block" onclick="goTab('didi');setTimeout(()=>{const i=document.getElementById('didiChatInput');if(i){i.value='Me ajude a montar um roteiro de viagem para ${v?escapeHTML(String(v.destino||'meu destino')).replace(/'/g,"\\'"):'o destino que eu informar'}';i.focus();}},80)">Montar roteiro com a Didi</button></div>`;
+}
+function abrirPlanejamentoViagem(){const v=state.viagem&&typeof state.viagem==='object'?state.viagem:{};openSheet('Planejar viagem',`<label class="f">Destino</label><input id="vgDestino" class="f" placeholder="Cidade, estado ou país" value="${escapeHTML(String(v.destino||''))}"><label class="f">Data de ida</label><input id="vgSaida" class="f" type="date" value="${escapeHTML(String(v.saida||''))}"><label class="f">Data de volta</label><input id="vgVolta" class="f" type="date" value="${escapeHTML(String(v.volta||''))}"><label class="f">Hospedagem (opcional)</label><input id="vgHospedagem" class="f" placeholder="Hotel, endereço ou observação" value="${escapeHTML(String(v.hospedagem||''))}"><label class="f">Transporte (opcional)</label><input id="vgTransporte" class="f" placeholder="Carro, ônibus, avião..." value="${escapeHTML(String(v.transporte||''))}"><label class="f">Roteiro / observações</label><textarea id="vgRoteiro" class="f" rows="4" placeholder="Passeios, reservas, horários e lembretes">${escapeHTML(String(v.roteiro||''))}</textarea><button class="btn block" style="margin-top:14px" onclick="salvarPlanejamentoViagem()">Salvar viagem</button>`);}
+function salvarPlanejamentoViagem(){const destino=document.getElementById('vgDestino')?.value.trim();if(!destino){toast('Informe o destino da viagem.');return;}state.viagem={destino,saida:document.getElementById('vgSaida')?.value||'',volta:document.getElementById('vgVolta')?.value||'',hospedagem:document.getElementById('vgHospedagem')?.value.trim()||'',transporte:document.getElementById('vgTransporte')?.value.trim()||'',roteiro:document.getElementById('vgRoteiro')?.value.trim()||'',atualizadoEm:Date.now()};save();closeSheet();render();toast('Planejamento da viagem salvo.');}
+function limparViagem(){if(!confirm('Apagar o planejamento da viagem atual?'))return;state.viagem=null;save();render();toast('Planejamento removido.');}
 
 /* ================= CALENDÁRIO ================= */
 function renderCalendario(){
