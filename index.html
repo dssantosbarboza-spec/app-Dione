@@ -1183,7 +1183,11 @@ function renderDidiChatScreen(){
         <div class="didiAvatar">D</div>
         <div><b>Didi</b><div style="font-size:11px;opacity:.85">Sua assistente financeira</div></div>
       </div>
-      <button onclick="confirmarLimparConversa()" style="background:none;border:none;color:#fff;font-size:18px;opacity:.85">🗑️</button>
+      <div style="display:flex;gap:10px">
+        <button onclick="testarVoz()" style="background:none;border:none;color:#fff;font-size:18px;opacity:.85" title="Testar voz">🔊</button>
+        <button onclick="alternarMotorVoz()" style="background:none;border:none;color:#fff;font-size:18px;opacity:.85" title="Trocar motor de voz">${getMotorDeVoz()==='alternativo'?'🌐':'📱'}</button>
+        <button onclick="confirmarLimparConversa()" style="background:none;border:none;color:#fff;font-size:18px;opacity:.85">🗑️</button>
+      </div>
     </div>
     ${renderDidiVoiceStatusBar()}
     <div class="chatRow" id="didiChatRow" style="min-height:280px;max-height:calc(100vh - 380px)">${bubbles}</div>
@@ -1504,6 +1508,11 @@ function falarInterno(texto, continuarEscutando){
     if(continuarEscutando && didiConversaAtiva && !didiPausado) setTimeout(()=>startVoiceQuery(true), 250);
     else setDidiVoiceState(didiConversaAtiva ? 'pausado' : 'idle');
   };
+  setDidiVoiceState('falando');
+  if(getMotorDeVoz()==='alternativo'){
+    falarComVozAlternativa(texto, seguir);
+    return;
+  }
   if("speechSynthesis" in window){
     try{
       if(window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
@@ -1511,7 +1520,6 @@ function falarInterno(texto, continuarEscutando){
       utter.lang = 'pt-BR'; utter.rate = 1; utter.pitch = 1;
       const voz = melhorVozPtBR();
       if(voz) utter.voice = voz;
-      setDidiVoiceState('falando');
       utter.onend = seguir;
       utter.onerror = seguir;
       window.speechSynthesis.speak(utter);
@@ -1813,11 +1821,52 @@ if("speechSynthesis" in window){
 function melhorVozPtBR(){
   const vozes = _cachedVoices.length ? _cachedVoices : (window.speechSynthesis ? window.speechSynthesis.getVoices() : []);
   const ptVozes = vozes.filter(v=>v.lang && v.lang.toLowerCase().startsWith('pt'));
-  return ptVozes.find(v=>/google/i.test(v.name) && !v.localService)
-      || ptVozes.find(v=>!v.localService)
+  return ptVozes.find(v=>v.localService && v.lang.toLowerCase()==='pt-br')
+      || ptVozes.find(v=>v.localService)
       || ptVozes.find(v=>v.lang.toLowerCase()==='pt-br')
       || ptVozes[0]
       || null;
+}
+function testarVoz(){
+  if(!("speechSynthesis" in window)){ toast('⚠️ speechSynthesis indisponível neste navegador'); return; }
+  const vozes = window.speechSynthesis.getVoices();
+  const ptVozes = vozes.filter(v=>v.lang && v.lang.toLowerCase().startsWith('pt'));
+  toast(`🔊 ${vozes.length} vozes no total, ${ptVozes.length} em português. Testando...`);
+  try{
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance('Teste de voz, um, dois, três.');
+    utter.lang = 'pt-BR'; utter.volume = 1; utter.rate = 1; utter.pitch = 1;
+    const voz = melhorVozPtBR();
+    if(voz) utter.voice = voz;
+    utter.onstart = ()=>toast(`🔊 Começou a falar: ${voz?voz.name:'voz padrão'}`);
+    utter.onend = ()=>toast('✅ Terminou (se não ouviu nada, confira volume/permissão de som do site)');
+    utter.onerror = (e)=>toast(`❌ Erro ao falar: ${e.error}`);
+    window.speechSynthesis.speak(utter);
+  }catch(e){ toast('❌ Erro: '+e.message); }
+}
+function getMotorDeVoz(){ return localStorage.getItem('dioneMotorVoz') || 'nativo'; }
+function setMotorDeVoz(m){ localStorage.setItem('dioneMotorVoz', m); toast(m==='alternativo' ? '🔊 Voz alternativa (Google Tradutor) ativada' : '🔊 Voz nativa do navegador ativada'); }
+function alternarMotorVoz(){
+  const novo = getMotorDeVoz()==='alternativo' ? 'nativo' : 'alternativo';
+  setMotorDeVoz(novo);
+  if(currentTab==='didi') render();
+  setTimeout(()=>falarInterno('Testando esse motor de voz.', false), 300);
+}
+function falarComVozAlternativa(texto, onEnd){
+  const chunks = texto.match(/.{1,170}(\s|$)/g) || [texto];
+  let i = 0;
+  function tocarProximo(){
+    if(i>=chunks.length){ if(onEnd) onEnd(); return; }
+    const pedaco = chunks[i++].trim();
+    if(!pedaco){ tocarProximo(); return; }
+    try{
+      const audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(pedaco)}&tl=pt-BR&client=tw-ob`);
+      audio.onended = tocarProximo;
+      audio.onerror = tocarProximo;
+      audio.play().catch(tocarProximo);
+    }catch(e){ tocarProximo(); }
+  }
+  tocarProximo();
 }
 function falarComoAle(texto){
   falarInterno(texto, didiConversaAtiva);
