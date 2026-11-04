@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="db-version" content="04-NOV-CORRECAO-2">
 <title>App Pessoal Dione</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
@@ -128,6 +129,8 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0;}
 .db-home{max-width:760px;margin:auto}.db-home-welcome{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 20px}.db-home-kicker{font-size:10px;letter-spacing:1.8px;color:#94702a}.db-home-welcome h2{font:500 30px Georgia,serif;color:var(--teal-dark);margin:8px 0}.db-home-welcome p{font-size:12px;color:var(--ink-soft);margin:0}.db-home-robot{background:#ffe6a5;border:1px solid #d1a543;border-radius:16px;width:50px;height:50px;font-size:26px;flex-shrink:0}.db-home-shortcuts button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;font-size:25px;box-shadow:0 5px 13px #214b3514;min-height:76px}.db-home-shortcuts button span{font-size:11px;font-weight:600}.db-home .card{border-radius:19px;padding:19px;box-shadow:0 4px 18px #163d3007}.db-home .card h3{font-size:14px;font-weight:600;margin-bottom:14px}.db-home-balance{position:relative;overflow:hidden;background:linear-gradient(125deg,#0d745b,#20a18a)!important;border:0!important;padding:24px!important}.db-home-balance h3{color:#fff!important;display:flex;justify-content:space-between}.db-home-balance h3 span{color:#f0cc75;font-size:22px}.db-home-balance .db-home-value{font-size:34px;color:#ffecb7!important;font-weight:700;letter-spacing:-1px}.db-home-balance .muted{color:#dcf3e9;margin-top:7px}.db-home-spending{background:linear-gradient(110deg,#fff6de,var(--panel));border-color:#ead8a8}.db-home-spending .gaugeTrack{height:7px;background:#ece3c8}.db-home-spending .gaugeFill{background:linear-gradient(90deg,#d5a334,#efcb75)}.db-home-totals .card:first-child{background:#d8f4e4;border-color:#b8dfc8}.db-home-totals .card:nth-child(2){background:#ffe2dd;border-color:#ecc4bd}.db-home-totals h3{font-size:12px!important}.db-home-assets{background:linear-gradient(110deg,#eee7fb,var(--panel));border-color:#ddd0ed}.db-home-assets h3{color:#7651a1}.db-home-cards{border-top:3px solid #deb64f!important}.db-home-cards h3 span{color:#98722d;margin-right:5px}.db-home-cards .row{padding:16px 0}.db-home h3 small{font-size:11px;color:var(--ink-soft);display:block;margin-top:5px;font-weight:400}.db-home-movements{border-top:3px solid #30a7a1!important}.db-home .db-move-chart{margin-bottom:12px}.db-dark .db-home-welcome h2{color:#d4eddf}.db-dark .db-home-spending,.db-dark .db-home-assets{background:var(--panel)}.db-dark .db-home-totals .card:first-child{background:#214736}.db-dark .db-home-totals .card:nth-child(2){background:#50342c}
 </style><style>
 body:not(.db-dark){--bg:#f7f6f1;--ink:#163f3c;--teal:#185b4e;--teal-dark:#174c40;--line:#e6e0d4} .db-home-welcome{margin:8px 0 24px}.db-home-welcome h2{font:500 30px Georgia,serif}.db-home-robot{display:none}.db-home-balance{background:linear-gradient(110deg,#194f43,#286658)!important;position:relative;min-height:146px}.db-home-balance:after{content:'';position:absolute;border:1px solid #c5a45b55;width:175px;height:175px;border-radius:50%;right:-34px;top:-44px;pointer-events:none}.db-home-balance .big{font-family:Georgia,serif;color:#f1d894!important}.db-home-balance .muted{font-size:12px}.db-home-balance h3{font-weight:400!important;font-size:12px!important}.db-home-balance h3 span{display:none}.db-home-totals{gap:14px;margin:16px 0}.db-home-totals .card:first-child{background:#eaf4eb;border-color:#d9e9d9}.db-home-totals .card:nth-child(2){background:#fcf0e9;border-color:#efded1}.db-home-totals .big{font-family:Georgia,serif;color:var(--ink)!important}.db-home-shortcuts{gap:10px;margin:16px 0}.db-home-shortcuts button{border:1px solid #d6e6dc;background:#edf5ef;color:#31775e;box-shadow:none;border-radius:15px;min-height:84px;font-size:20px;font-weight:400}.db-home-shortcuts button:nth-child(2){background:#f7f1e5;border-color:#e8dabe;color:#9b752f}.db-home-shortcuts button:nth-child(3){background:#f1edf8;border-color:#e3d8f0;color:#7d55a7}.db-home-shortcuts button:nth-child(4){background:#eaf1fb;border-color:#d8e3f1;color:#4679ae}.db-home-shortcuts button:nth-child(5){background:#e7f5f2;border-color:#d1e6e1;color:#258b83}.db-home-shortcuts button:nth-child(6){background:#fcf0e8;border-color:#ecd9c8;color:#bb7650}.db-home-shortcuts button span{font-weight:400;font-size:12px}.db-home-talk{width:100%;display:flex;align-items:center;gap:13px;text-align:left;background:#faf8f0;border:1px solid #e6d4a6;border-radius:16px;padding:15px;margin:16px 0;color:#174c40}.db-home-talk b{font-size:13px;font-weight:600}.db-home-talk small{display:block;font-size:11px;color:#788078;margin-top:6px}.db-home-mic{display:grid;place-items:center;border-radius:50%;width:42px;height:42px;background:#174c40;color:#e7c476;font-size:22px}.db-home-spending .muted{font-size:12px}.db-dark .db-home-talk{background:var(--panel);color:var(--ink)}.db-dark .db-home-shortcuts button{background:var(--panel);color:var(--ink)}.db-dark .db-home-totals .card:first-child{background:#214736}.db-dark .db-home-totals .card:nth-child(2){background:#50342c}
+</style><style>
+:root{color-scheme:light}.db-dark{color-scheme:dark}.formSheet .sheetBody{background:var(--panel);color:var(--ink);padding-bottom:max(28px,env(safe-area-inset-bottom));}.sheetBody label,.sheetBody label.f,.sheetBody h3,.sheetHead h3,.sheetBody p{color:var(--ink)!important}.sheetBody .muted{color:var(--ink-soft)!important}.sheetBody input,.sheetBody textarea,.sheetBody select,input.f,textarea.f,select.f,.db-field{background:var(--panel)!important;color:var(--ink)!important;border:1px solid var(--line);font-size:16px!important;caret-color:var(--ink)}.sheetBody input::placeholder,.sheetBody textarea::placeholder{color:var(--ink-soft)}.sheetBody .sheetHead .x{color:var(--ink)}.sheetBody .btn{min-height:44px}.db-hidden .db-money{font-size:inherit!important;letter-spacing:normal!important}.db-hidden .db-money:after{content:none}.db-hide-balance .db-home-value .db-money{font-size:0!important;user-select:none}.db-hide-balance .db-home-value .db-money:after{content:'••••••';font-size:28px;letter-spacing:3px}.db-dark .card h3,.db-dark .db-home-spending h3,.db-dark .db-home-assets h3{color:#cce9da!important}.db-dark .db-settings,.db-dark .sheetBody{color:#edf5ef}.db-dark .alertItem{color:#edf5ef}.db-dark .alertItem.info{background:#244435}.db-dark .alertItem.warn{background:#51421e}.db-dark .alertItem.danger{background:#4e2d28}#db-storage-status{padding:5px 14px;font-size:11px;color:var(--ink-soft);background:var(--bg)}#db-storage-status.db-store-error{background:#fff0c9;color:#633f11}.db-dark #db-storage-status.db-store-error{background:#51421e;color:#ffe7b2}.db-home-totals .big{overflow-wrap:anywhere}.db-talk{touch-action:manipulation}#didiPanel{height:min(650px,75dvh)}.sheetBody{scroll-padding-bottom:90px}.db-dark .db-home-totals .card{border-color:var(--line)}
 </style></head>
 <body>
 
@@ -171,7 +174,21 @@ body:not(.db-dark){--bg:#f7f6f1;--ink:#163f3c;--teal:#185b4e;--teal-dark:#174c40
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="backup-data.js"></script>
+
+<script>/* State persistence: compact synchronous checkpoint + full transactional IndexedDB copy. */
+window.DBStore={tail:Promise.resolve(),ready:false,localError:null,lastError:null,stamp:0};
+DBStore.safeGet=function(key){try{return localStorage.getItem(key)}catch{return null}};
+DBStore.valid=x=>!!(x&&typeof x==='object'&&Number.isFinite(Number(x.saldo))&&Array.isArray(x.lancamentos)&&Array.isArray(x.cards));
+DBStore.readLocal=function(){for(const key of ['dioneData2','dbStatePrevious']){try{const x=JSON.parse(DBStore.safeGet(key)||'null');if(DBStore.valid(x)){DBStore.from=key;return x}}catch{}}DBStore.from='empty';return null};
+DBStore.open=function(){if(DBStore.dbPromise)return DBStore.dbPromise;DBStore.dbPromise=new Promise((resolve,reject)=>{if(!window.indexedDB)return reject(Error('Armazenamento de dados indisponível'));const request=indexedDB.open('DBPersonalData',1);request.onupgradeneeded=()=>{request.result.createObjectStore('state')};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);request.onblocked=()=>reject(Error('Feche outras abas antigas do app e tente novamente'))});return DBStore.dbPromise};
+DBStore.read=async function(){const db=await DBStore.open();return new Promise((resolve,reject)=>{const tx=db.transaction('state','readonly'),req=tx.objectStore('state').get('current');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})};
+DBStore.write=async function(envelope){const db=await DBStore.open();return new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite'),store=tx.objectStore('state');store.put(envelope,'current');tx.oncomplete=()=>resolve(true);tx.onabort=()=>reject(tx.error||Error('Não foi possível gravar'));tx.onerror=()=>{}})};
+DBStore.status=function(text,error=false){let box=document.getElementById('db-storage-status');if(!box){box=document.createElement('div');box.id='db-storage-status';box.setAttribute('role','status');document.querySelector('#app header').after(box)}box.textContent=text;box.classList.toggle('db-store-error',error);DBStore.lastError=error?text:null};
+DBStore.checkpoint=function(data){const {undoSnapshots,...compact}=data;try{const previous=localStorage.getItem('dioneData2');localStorage.setItem('dioneData2',JSON.stringify(compact));localStorage.setItem('dbStateSavedAt',String(DBStore.stamp));if(previous&&DBStore.valid(JSON.parse(previous)))try{const old=JSON.parse(previous);delete old.undoSnapshots;localStorage.setItem('dbStatePrevious',JSON.stringify(old))}catch{}DBStore.localError=null;return true}catch(e){DBStore.localError=e;return false}};
+DBStore.persist=function(data){const copy=JSON.parse(JSON.stringify(data));DBStore.stamp=Math.max(Date.now(),DBStore.stamp+1);const savedAt=DBStore.stamp;const checkpoint=DBStore.checkpoint(copy);DBStore.tail=DBStore.tail.catch(()=>{}).then(()=>DBStore.write({data:copy,savedAt})).then(()=>{DBStore.status('Dados salvos neste aparelho · '+new Date(savedAt).toLocaleTimeString('pt-BR'));return true}).catch(e=>{DBStore.status(checkpoint?'Dados salvos na cópia local. Histórico completo indisponível; exporte um backup.':'Não foi possível salvar neste aparelho. Exporte um backup antes de fechar.',true);return checkpoint});return DBStore.tail};
+DBStore.flush=()=>DBStore.tail;
+DBStore.init=async function(){const input=document.getElementById('lockInput'),enter=document.querySelector('#lockScreen button'),bio=document.getElementById('db-bio-unlock');input.disabled=true;enter.disabled=true;if(bio)bio.disabled=true;const local=DBStore.readLocal();try{const disk=await DBStore.read();const localStamp=Number(DBStore.safeGet('dbStateSavedAt')||0);if(disk&&DBStore.valid(disk.data)&&(!local||disk.savedAt>=localStamp)){state=disk.data;DBStore.from='indexedDB';DBStore.stamp=disk.savedAt}else if(local)state=local;DB.normalize();DBStore.ready=true;if(DBStore.from!=='empty'){await DBStore.persist(state)}else DBStore.status('Nenhum dado salvo neste endereço. Restaure o backup de 03/11.',true)}catch(e){DB.normalize();DBStore.ready=true;DBStore.status(local?'Cópia local carregada.':'Restaure o backup de 03/11 para recuperar suas informações.',!local)}finally{input.disabled=false;enter.disabled=false;if(bio)bio.disabled=false;DBStore.ready=true;DB.bioUI?.();if(location.protocol==='file:')DBStore.status('Abra o endereço HTTPS do app publicado no GitHub. Arquivos baixados têm armazenamento separado.',true)}};
+</script>
 <script>
 
 /* ================= DATA MODEL ================= */
@@ -203,12 +220,9 @@ const DEFAULT_STATE = () => ({
 
 let state = load();
 if(state.pendingSalaryDeduction===undefined) state.pendingSalaryDeduction = 0;
-function load(){
-  try{ const raw = localStorage.getItem("dioneData2"); if(raw) return JSON.parse(raw); }catch(e){}
-  try{ if(window.__DIONE_BACKUP__){ const base=DEFAULT_STATE(); const restored=Object.assign(base, window.__DIONE_BACKUP__); if(!restored.password) restored.password=base.password; localStorage.setItem("dioneData2", JSON.stringify(restored)); return restored; } }catch(e){}
-  return DEFAULT_STATE();
-}
-function save(){ localStorage.setItem("dioneData2", JSON.stringify(state)); }
+function load(){ return DBStore.readLocal() || DEFAULT_STATE(); }
+function save(){if(window.DBStore)DBStore.persist(state);}
+
 function uid(p){ return (p||"id")+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function fmt(n){ n = Number(n)||0; return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function localDateStr(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
@@ -312,7 +326,7 @@ function applyLancEffect(l){
       l._consumedVale = consumed;
       l._creditedAmount = amt;
       state.saldo += amt;
-      pushMovement('credito', `${l.category}: ${l.desc}${consumed>0?` (descontado ${fmt(consumed)} de vale)`:''}`, amt);
+      pushMovement('credito', `${l.category}: ${l.desc}${consumed>0?` (descontado ${DB.rawMoney(consumed)} de vale)`:''}`, amt);
     } else {
       state.saldo += Number(l.amount||0);
       pushMovement('credito', `${l.category}: ${l.desc}`, l.amount);
@@ -476,7 +490,7 @@ function renderSituacao(){
   <div class="db-home-welcome"><div><div class="db-home-kicker">SEU ESPAÇO PESSOAL</div><h2>Olá, DB.</h2><p>Tudo o que importa, em um só lugar.</p></div><button class="db-home-robot" onclick="DB.openVoice(true)" aria-label="Fale com a DIdI">🤖</button></div>
   <div class="card db-home-balance">
     <h3>Saldo disponível <span>✦</span></h3>
-    <div class="big db-home-value">${fmt(saldo)}</div>
+    <div class="big db-home-value"><span class="db-money">${fmt(saldo)}</span></div>
     <div class="muted">${DB.monthLabel(ym)}</div>
   </div>
   <div class="grid2 db-home-totals">
@@ -617,7 +631,7 @@ function openLancForm(id, presetCardId, presetDate){
     </div>
     <label class="f">Comprovante (opcional)</label><input class="f" id="f_receipt" type="file" accept="image/*">
     ${it.receipt?'<div class="muted">Já existe um comprovante anexado.</div>':''}
-    <div class="muted" style="margin-top:6px">ℹ️ "Realizado" abate/credita na hora. "Previsto" só aplica quando a data chegar, ou toque em "Aplicar agora" na lista pra antecipar. Compras em cartão com fechamento configurado calculam a data de vencimento automaticamente.</div>
+    <div class="muted" style="margin-top:6px">ℹ️ "Realizado" abate/credita na hora. "Previsto" permanece pendente até você confirmar em "Aplicar agora". Compras em cartão com fechamento configurado calculam a data de vencimento automaticamente.</div>
     <div style="display:flex;gap:10px;margin-top:16px">
       ${id?`<button class="btn danger" onclick="deleteLanc('${id}')">Excluir</button>`:''}
       <button class="btn block" onclick="saveLanc('${id||''}')">Salvar</button>
@@ -637,18 +651,18 @@ function updateParcPreview(){
   const previewEl = document.getElementById('parcPreview');
   if(!previewEl || !ptypeEl) return;
   if(typeEl.value !== 'saida' || ptypeEl.value !== 'parcelado'){ previewEl.textContent=''; return; }
-  const amount = parseFloat(document.getElementById('f_amount').value)||0;
+  const amount = DB.parseAmount(document.getElementById('f_amount').value)||0;
   const n = Math.max(2, parseInt(document.getElementById('f_installments').value,10)||2);
   const dateVal = document.getElementById('f_date').value || todayStr();
   const per = Math.round((amount/n)*100)/100;
   const jaVencida = dateVal <= todayStr();
-  previewEl.textContent = `Serão criadas ${n} parcelas de ${fmt(per)} (total ${fmt(amount)}).` + (jaVencida ? ' A 1ª parcela já vence hoje ou antes, então será marcada como paga automaticamente.' : '');
+  previewEl.textContent = `Serão criadas ${n} parcelas de ${DB.rawMoney(per)} (total ${DB.rawMoney(amount)}). Somente a primeira parcela será paga se você escolher Realizado.`;
 }
 function saveLanc(id){
   const type = document.getElementById('f_type_es').value;
   const desc = document.getElementById('f_desc').value.trim();
   const category = document.getElementById('f_cat').value;
-  const amount = parseFloat(document.getElementById('f_amount').value)||0;
+  const amount = DB.parseAmount(document.getElementById('f_amount').value)||0;
   const date = document.getElementById('f_date').value;
   const status = document.getElementById('f_status').value;
   const ptypeEl = document.getElementById('f_ptype');
@@ -676,7 +690,7 @@ function saveLanc(id){
       for(let n=1;n<=installments;n++){
         const dDate = n===1 ? firstDueDate : addMonthsIso(firstDueDate, n-1);
         let stat = n===1 ? status : 'previsto';
-        if(n===1 && dDate <= todayStr()) stat = 'realizado';
+        // Keep the status explicitly selected by the user.
         const rec = {id:uid('lc'),type,desc,category,amount:per,date:dDate,purchaseDate:date,status:stat,installments,installmentNum:n,groupId,cardId,receipt:n===1?receiptData:null,trashed:false,applied:false};
         state.lancamentos.push(rec);
         if(n===1) firstRecord = rec;
@@ -1340,7 +1354,7 @@ document.getElementById('lockTitle').textContent = "App Pessoal Dione";
 })();
 </script>
 <script>/* DB upgrade. Existing financial calculations are intentionally retained. */
-const DB={esc:v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),month:todayStr().slice(0,7),hidden:localStorage.getItem('dbHide')!=='0',weather:null,fx:null,voice:false,flow:null,events:[],heard:false};
+const DB={esc:v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),month:todayStr().slice(0,7),hidden:DBStore.safeGet('dbHide')!=='0',weather:null,fx:null,voice:false,flow:null,events:[],heard:false};
 DB.rawMoney=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const originalFmt=fmt;
 fmt=n=>`<span class="db-money">${originalFmt(n)}</span>`;
@@ -1483,6 +1497,49 @@ DB.biometricInfo=DB.bioConfigure;
 const bioOldMenu=DB.menuActions;DB.menuActions=function(){bioOldMenu();const b=document.querySelector('.drawerAction[onclick="DB.biometricInfo()"]');if(b)b.setAttribute('data-db-bio','');DB.bioUI()};
 const bioOldSettings=DB.settings;DB.settings=function(){return bioOldSettings()+`<div class="card"><h3>Digital / biometria</h3><p>${DB.bioRead()?'Ativada neste navegador.':'Ainda não configurada neste navegador.'}</p><button class="btn" onclick="DB.bioConfigure()">${DB.bioRead()?'Desativar':'Ativar'} biometria</button></div>`};
 DB.bioUI();DB.menuActions();
+
+/* Corrections based on the supplied 03-Nov backup and observed mobile failures. */
+runAuto=function(){/* A due date is a reminder, never proof of payment. */};
+runAutoLancamentos=function(){};runAutoDebts=function(){};
+fmt=originalFmt;
+DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
+const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
+DB.currentVersion='04-NOV-CORRECAO-2';
+DB.storageReady=DBStore.init();
+save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
+const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
+// Full import is committed before its success message. No automatic posting runs on import.
+DB.importData=async function(parsed){if(!DBStore.valid(parsed))throw Error('Backup inválido: saldo, cartões ou lançamentos ausentes.');const old=state,copy=JSON.parse(JSON.stringify(parsed));const previous=JSON.parse(JSON.stringify(state));const pass=old.password;state=copy;if(!state.password)state.password=pass||'1234';DB.normalize();const ok=await DBStore.persist(state);if(!ok){state=old;throw Error('O backup não pôde ser salvo. Exporte os dados e verifique o armazenamento.')}DB.recoveryBeforeImport=previous;DB.month=todayStr().slice(0,7);DBStore.from='imported';render();return {saldo:state.saldo,count:state.lancamentos.length}};
+importBackup=function(event){const input=event.target,file=input.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=async()=>{try{const parsed=JSON.parse(reader.result);if(!DBStore.valid(parsed))throw Error('Arquivo não reconhecido como backup');if(!confirm('Restaurar este backup exatamente como salvo? Saldo '+DB.rawMoney(parsed.saldo)+', '+parsed.lancamentos.length+' lançamentos. Nenhum pagamento será aplicado automaticamente.'))return;const result=await DB.importData(parsed);toggleDrawer(false);toast('Backup salvo · saldo '+DB.rawMoney(result.saldo))}catch(e){DBStore.status(e.message,true);toast(e.message)}finally{input.value=''}};reader.onerror=()=>DBStore.status('Não foi possível ler o backup. Tente selecionar o arquivo novamente.',true);reader.readAsText(file)};
+// Keep main amount privacy separate from other pages and form controls.
+DB.privacy=function(){document.body.classList.remove('db-hidden');const balance=document.querySelector('.db-home-balance');if(balance)balance.classList.toggle('db-hide-balance',DB.hidden);const b=document.getElementById('db-eye');if(b){b.hidden=currentTab!=='situacao';b.style.display=currentTab==='situacao'?'inline-flex':'none';b.textContent=DB.hidden?'👁 Mostrar saldo':'👁 Ocultar saldo';b.title='Somente saldo disponível do Início';b.setAttribute('aria-label',DB.hidden?'Mostrar saldo principal':'Ocultar saldo principal');b.setAttribute('aria-pressed',String(DB.hidden))}};
+DB.maskMessage=function(){};
+// No unsolicited greeting or spoken reminder when the app opens.
+DB.checkReminders=function(){if(document.getElementById('app').style.display==='none')return;DB.events=DB.currentReminders(new Date());let box=document.getElementById('db-reminders');if(!box){box=document.createElement('section');box.id='db-reminders';document.getElementById('content').prepend(box)}box.innerHTML=DB.events.length?'<div class="db-banner"><h3>Seus lembretes</h3>'+[...new Set(DB.events.map(e=>e.text))].map(t=>'<p>'+DB.esc(t)+'</p>').join('')+'<button class="btn small" onclick="DB.speakReminders()">Ouvir lembretes</button></div>':''};
+// Locale-safe amounts in text fields and speech. Never silently truncate 1.234,56.
+DB.parseAmount=function(raw){let s=String(raw).replace(/R\$/gi,'').replace(/\s/g,'').trim();if(!/^\d+(?:[.,]\d+)*$/.test(s))return NaN;if(s.includes(',')){s=s.replace(/\./g,'').replace(',','.')}else if(/^\d{1,3}(?:\.\d{3})+$/.test(s))s=s.replace(/\./g,'');const n=Number(s);return Number.isFinite(n)?n:NaN};
+const dbOrigLancForm=openLancForm;openLancForm=function(...args){dbOrigLancForm(...args);const input=document.getElementById('f_amount');if(input){input.type='text';input.inputMode='decimal';input.autocomplete='off'}};
+DB.updateEmptyState=function(){if(state.lancamentos.length||state.movements.length||Number(state.saldo)!==0)return;let empty=document.getElementById('db-recover-empty');if(empty)return;empty=document.createElement('div');empty.id='db-recover-empty';empty.className='db-banner';empty.innerHTML='<h3>Restaure seus dados</h3><p>Este endereço ainda não tem seus registros. Use o backup de 03/11 enviado junto desta atualização. Ele contém 266 lançamentos e saldo de R$ 147,85.</p><button class="btn" onclick="document.getElementById(\'importFile\').click()">Restaurar backup</button>';document.getElementById('content').prepend(empty)};
+const dbViewRender=render;render=function(){dbViewRender();DB.updateEmptyState();const panel=document.getElementById('sheet');if(panel?.classList.contains('show'))DB.stopVoice()};
+// Preserve the microphone session across requests that navigate the app.
+goTab=function(id){const chatting=DB.voice||DB.processing;currentTab=id;toggleDrawer(false);closeSheet();if(!chatting){document.getElementById('didiPanel')?.classList.remove('open');DB.stopVoice()}render();document.getElementById('content').scrollTop=0;DB.privacy()};
+const dbNewSheet=openSheet;openSheet=function(...args){DB.stopVoice();dbNewSheet(...args)};
+const dbFinancialHandle=DBOriginalHandle;
+DB.dispatch=async function(text){if(DB.processing)return;const original=String(text||'').trim();if(!original)return;DB.processing=true;DB.addVoiceUser(original);try{const handled=await DB.handle(original);if(!handled){window.DBDispatching=true;try{dbFinancialHandle(original)}finally{window.DBDispatching=false}}}catch(e){DB.flow=null;DB.say('Jhony, não consegui concluir: '+(e.message||'tente novamente')+'.')}finally{DB.processing=false;if(DB.voice&&!DB.speaking)DB.scheduleListen()}};
+const dbPreviousHandle=DB.handle;
+DB.handle=async function(text){let t=DB.norm(text).replace(/\b(?:didi|dione)\b/g,'').trim();if(/\b(bom dia|boa tarde|boa noite)\b/.test(t)){DB.flow=null;window.__didiPending=null;const greeting=/bom dia/.test(t)?'Bom dia':/boa tarde/.test(t)?'Boa tarde':'Boa noite';DB.say(greeting+', Jhony. Como posso lhe ajudar?');return true}if(/^(oi|ola|oie|ei|tudo bem)$/.test(t)){DB.say('Olá, Jhony. Como posso lhe ajudar?');return true}if(/obrigad/.test(t)){DB.say('Por nada, Jhony. O que mais você precisa?');return true}if(/^(ajuda|o que voce faz|o que posso pedir|comandos)$/.test(t)){DB.say('Jhony, você pode consultar saldo, pagamentos de qualquer mês, cartões, agenda, viagens, tempo e cotações; registrar gastos e entradas; e cadastrar compromissos. Diga parar quando terminar.');return true}if(/(?:previsao|previsoes|pagamento|pagamentos|contas|vencimentos|\bpagar\b|pagarei)/.test(t)&&!DB.flow){if(/\b20\d{2}\b/.test(t)||/janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|mes|anterior|passado|proximo/.test(t)){const m=DB.parseMonth(t),p=DB.payments(m);DB.month=m;goTab('previsao');DB.say('Jhony, em '+DB.monthLabel(m)+', os lançamentos pagos somam '+DB.rawMoney(p.paidTotal)+' e os compromissos em aberto somam '+DB.rawMoney(p.pendingTotal)+'. '+(p.pending.length?p.pending.slice(0,6).map(x=>x.desc+': '+DB.rawMoney(x.amount)).join('; '):'Não há pendências registradas para esse mês.')+' O saldo importado não foi alterado.');return true}DB.flow={stage:'payment-month'};DB.say('De qual mês e ano, Jhony?');return true}if(DB.flow?.stage==='payment-month'){DB.flow=null;return DB.handle('pagamentos de '+text)}if(/^(?:saldo|meu saldo|qual (?:e )?(?:o )?(?:meu )?saldo|quanto tenho(?: na conta)?)$/.test(t)){DB.say('Jhony, seu saldo disponível é '+DB.rawMoney(state.saldo)+'.');return true}if(/(?:recebi|ganhei|entrou|gastei|paguei|comprei)/.test(t)&&!DB.flow){const match=t.match(/(?:r\$\s*)?\d+(?:[.,]\d+)*/);if(match){const amount=DB.parseAmount(match[0]);if(!(amount>0)){DB.say('Não entendi o valor. Diga, por exemplo, paguei 25 reais no mercado.');return true}const type=/recebi|ganhei|entrou/.test(t)?'entrada':'saida';const cats=type==='entrada'?state.categoriesIn:state.categoriesOut;const category=cats.find(c=>DB.norm(c).split(/\s+/).some(w=>w.length>3&&t.includes(w)));DB.flow={stage:'financial-category',type,amount,desc:text};if(category){DB.flow.category=category;DB.flow.stage='financial-confirm';DB.say('Registrar '+(type==='entrada'?'entrada':'despesa')+' de '+DB.rawMoney(amount)+' em '+category+'?')}else DB.say('Em qual categoria, Jhony?');return true}}
+if(DB.flow?.stage==='financial-category'){DB.flow.category=state[DB.flow.type==='entrada'?'categoriesIn':'categoriesOut'].find(c=>DB.norm(c)===t)||text;DB.flow.stage='financial-confirm';DB.say('Confirmar '+DB.rawMoney(DB.flow.amount)+' em '+DB.flow.category+'?');return true}if(DB.flow?.stage==='financial-confirm'){if(/^(sim|confirmo|confirmar|pode|pode salvar|salvar|isso|ok)$/.test(t)){const f=DB.flow;DB.flow=null;snapshot();const rec={id:uid('lc'),type:f.type,desc:f.category,category:f.category,amount:f.amount,date:todayStr(),purchaseDate:todayStr(),status:'realizado',installments:1,installmentNum:1,groupId:null,cardId:null,receipt:null,trashed:false,applied:false};state.lancamentos.push(rec);applyLancEffect(rec);logHist('Registro confirmado por voz: '+f.category);save();await DBStore.flush();render();DB.say('Salvei, Jhony. '+DB.rawMoney(f.amount)+' em '+f.category+'.')}else if(/nao|cancela/.test(t)){DB.flow=null;DB.say('Certo, Jhony. Não registrei.')}else DB.say('Diga sim para confirmar ou cancelar.');return true}
+return dbPreviousHandle(text)};
+DB.scheduleListen=function(){clearTimeout(DB.listenTimer);if(!DB.voice||DB.speaking||DB.processing||DB.recActive||document.hidden||document.getElementById('sheet').classList.contains('show'))return;DB.listenTimer=setTimeout(DB.listen,350)};
+DB.listen=function(){if(!DB.voice||DB.speaking||DB.processing||DB.recActive||document.hidden)return;try{DB.rec.start()}catch(e){if(e.name!=='InvalidStateError'){DB.stopVoice();DB.voiceStatus('Não foi possível iniciar o microfone. Tente novamente.')}}};
+DB.stopVoice=function(){DB.voice=false;clearTimeout(DB.listenTimer);clearTimeout(DB.speechWatch);DB.listenIdle=0;try{DB.rec?.abort()}catch{}DB.voiceStatus('Microfone desligado')};
+DB.say=function(message){const box=document.getElementById('didiBody');if(box){const div=document.createElement('div');div.className='didiMsg didiBot';div.textContent=message;box.append(div);box.scrollTop=box.scrollHeight}DB.lastSpoken=message;if(!state.dbSettings.voice||!window.speechSynthesis){DB.scheduleListen();return}DB.speaking=true;clearTimeout(DB.listenTimer);try{DB.rec?.abort()}catch{}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(message);u.lang='pt-BR';let finished=false;const done=()=>{if(finished)return;finished=true;DB.speaking=false;DB.scheduleListen()};u.onend=done;u.onerror=()=>{done();DB.voiceStatus('Áudio não disponível. A resposta está escrita na tela.')};speechSynthesis.speak(u)};
+DB.repairMic=function(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;try{DB.rec?.abort()}catch{}const r=new SR();r.lang='pt-BR';r.interimResults=false;r.continuous=false;DB.rec=r;r.onstart=()=>{DB.recActive=true;document.getElementById('didiMic').classList.add('active');DB.voiceStatus('Ouvindo… diga bom dia, sua pergunta ou parar')};r.onresult=e=>{DB.listenIdle=0;DB.dispatch(e.results[e.results.length-1][0].transcript)};r.onend=()=>{DB.recActive=false;document.getElementById('didiMic').classList.remove('active');DB.scheduleListen()};r.onerror=e=>{if(e.error==='aborted')return;if(e.error==='no-speech'){DB.listenIdle=(DB.listenIdle||0)+1;if(DB.listenIdle>=4){DB.stopVoice();DB.voiceStatus('Conversa pausada após silêncio. Toque para retomar.')}return}DB.stopVoice();DB.voiceStatus('Microfone: '+e.error+'. Confira a permissão no Chrome.')};document.getElementById('didiMic').onclick=()=>{if(DB.voice)DB.stopVoice();else{DB.voice=true;DB.scheduleListen()}}};DB.repairMic();
+// Spoken commands can cancel any step without creating an event/transaction.
+const dbHandleSteps=DB.handle;DB.handle=async function(text){if(/^(?:didi\s+)?(?:cancelar|cancele|parar|pare|chega|encerrar|tchau)$/i.test(DB.norm(text))){DB.flow=null;DB.stopVoice();DB.say('Até mais, Jhony.');return true}return dbHandleSteps(text)};
+DB.healthHTML=function(){return `<div class="card"><h3>Dados e recuperação</h3><p>Versão ${DB.currentVersion}</p><p>${state.lancamentos.length} lançamentos · ${state.agenda.length} compromissos · ${state.aniversarios.length} aniversários</p><p>Salvar não aplica pagamentos previstos automaticamente.</p><button class="btn" onclick="document.getElementById('importFile').click()">Restaurar backup de 03/11</button><button class="btn outline" onclick="exportBackup()">Exportar meus dados atuais</button><p class="muted">${DB.esc(location.origin)}${location.protocol==='file:'?' · Abra o site publicado, em vez deste arquivo baixado.':''}</p></div>`};
+const dbSettingsRepair=DB.settings;DB.settings=function(){return DB.healthHTML()+dbSettingsRepair().replace('Resumo falado na primeira abertura desbloqueada a partir das 5h. Se o navegador bloquear o áudio, use Ouvir lembretes.','A DIdI só fala quando você inicia a conversa ou toca em Ouvir lembretes.')};
+DB.privacy();
 
 </script>
 </body>
