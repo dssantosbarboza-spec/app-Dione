@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="db-version" content="04-NOV-CORRECAO-2">
+<meta name="db-version" content="04-NOV-CORRECAO-3">
 <title>App Pessoal Dione</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
@@ -1504,7 +1504,7 @@ runAutoLancamentos=function(){};runAutoDebts=function(){};
 fmt=originalFmt;
 DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
 const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
-DB.currentVersion='04-NOV-CORRECAO-2';
+DB.currentVersion='04-NOV-CORRECAO-3';
 DB.storageReady=DBStore.init();
 save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
 const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
@@ -1528,7 +1528,7 @@ const dbFinancialHandle=DBOriginalHandle;
 DB.dispatch=async function(text){if(DB.processing)return;const original=String(text||'').trim();if(!original)return;DB.processing=true;DB.addVoiceUser(original);try{const handled=await DB.handle(original);if(!handled){window.DBDispatching=true;try{dbFinancialHandle(original)}finally{window.DBDispatching=false}}}catch(e){DB.flow=null;DB.say('Jhony, não consegui concluir: '+(e.message||'tente novamente')+'.')}finally{DB.processing=false;if(DB.voice&&!DB.speaking)DB.scheduleListen()}};
 const dbPreviousHandle=DB.handle;
 DB.handle=async function(text){let t=DB.norm(text).replace(/\b(?:didi|dione)\b/g,'').trim();if(/\b(bom dia|boa tarde|boa noite)\b/.test(t)){DB.flow=null;window.__didiPending=null;const greeting=/bom dia/.test(t)?'Bom dia':/boa tarde/.test(t)?'Boa tarde':'Boa noite';DB.say(greeting+', Jhony. Como posso lhe ajudar?');return true}if(/^(oi|ola|oie|ei|tudo bem)$/.test(t)){DB.say('Olá, Jhony. Como posso lhe ajudar?');return true}if(/obrigad/.test(t)){DB.say('Por nada, Jhony. O que mais você precisa?');return true}if(/^(ajuda|o que voce faz|o que posso pedir|comandos)$/.test(t)){DB.say('Jhony, você pode consultar saldo, pagamentos de qualquer mês, cartões, agenda, viagens, tempo e cotações; registrar gastos e entradas; e cadastrar compromissos. Diga parar quando terminar.');return true}if(/(?:previsao|previsoes|pagamento|pagamentos|contas|vencimentos|\bpagar\b|pagarei)/.test(t)&&!DB.flow){if(/\b20\d{2}\b/.test(t)||/janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|mes|anterior|passado|proximo/.test(t)){const m=DB.parseMonth(t),p=DB.payments(m);DB.month=m;goTab('previsao');DB.say('Jhony, em '+DB.monthLabel(m)+', os lançamentos pagos somam '+DB.rawMoney(p.paidTotal)+' e os compromissos em aberto somam '+DB.rawMoney(p.pendingTotal)+'. '+(p.pending.length?p.pending.slice(0,6).map(x=>x.desc+': '+DB.rawMoney(x.amount)).join('; '):'Não há pendências registradas para esse mês.')+' O saldo importado não foi alterado.');return true}DB.flow={stage:'payment-month'};DB.say('De qual mês e ano, Jhony?');return true}if(DB.flow?.stage==='payment-month'){DB.flow=null;return DB.handle('pagamentos de '+text)}if(/^(?:saldo|meu saldo|qual (?:e )?(?:o )?(?:meu )?saldo|quanto tenho(?: na conta)?)$/.test(t)){DB.say('Jhony, seu saldo disponível é '+DB.rawMoney(state.saldo)+'.');return true}if(/(?:recebi|ganhei|entrou|gastei|paguei|comprei)/.test(t)&&!DB.flow){const match=t.match(/(?:r\$\s*)?\d+(?:[.,]\d+)*/);if(match){const amount=DB.parseAmount(match[0]);if(!(amount>0)){DB.say('Não entendi o valor. Diga, por exemplo, paguei 25 reais no mercado.');return true}const type=/recebi|ganhei|entrou/.test(t)?'entrada':'saida';const cats=type==='entrada'?state.categoriesIn:state.categoriesOut;const category=cats.find(c=>DB.norm(c).split(/\s+/).some(w=>w.length>3&&t.includes(w)));DB.flow={stage:'financial-category',type,amount,desc:text};if(category){DB.flow.category=category;DB.flow.stage='financial-confirm';DB.say('Registrar '+(type==='entrada'?'entrada':'despesa')+' de '+DB.rawMoney(amount)+' em '+category+'?')}else DB.say('Em qual categoria, Jhony?');return true}}
-if(DB.flow?.stage==='financial-category'){DB.flow.category=state[DB.flow.type==='entrada'?'categoriesIn':'categoriesOut'].find(c=>DB.norm(c)===t)||text;DB.flow.stage='financial-confirm';DB.say('Confirmar '+DB.rawMoney(DB.flow.amount)+' em '+DB.flow.category+'?');return true}if(DB.flow?.stage==='financial-confirm'){if(/^(sim|confirmo|confirmar|pode|pode salvar|salvar|isso|ok)$/.test(t)){const f=DB.flow;DB.flow=null;snapshot();const rec={id:uid('lc'),type:f.type,desc:f.category,category:f.category,amount:f.amount,date:todayStr(),purchaseDate:todayStr(),status:'realizado',installments:1,installmentNum:1,groupId:null,cardId:null,receipt:null,trashed:false,applied:false};state.lancamentos.push(rec);applyLancEffect(rec);logHist('Registro confirmado por voz: '+f.category);save();await DBStore.flush();render();DB.say('Salvei, Jhony. '+DB.rawMoney(f.amount)+' em '+f.category+'.')}else if(/nao|cancela/.test(t)){DB.flow=null;DB.say('Certo, Jhony. Não registrei.')}else DB.say('Diga sim para confirmar ou cancelar.');return true}
+if(DB.flow?.stage==='financial-category'){DB.flow.category=state[DB.flow.type==='entrada'?'categoriesIn':'categoriesOut'].find(c=>DB.norm(c)===t)||text;DB.flow.stage='financial-confirm';DB.say('Confirmar '+DB.rawMoney(DB.flow.amount)+' em '+DB.flow.category+'?');return true}if(DB.flow?.stage==='financial-confirm'){if(/^(sim|confirmo|confirmar|pode|pode salvar|salvar|isso|ok)$/.test(t)){const f=DB.flow;DB.flow=null;snapshot();const rec={id:uid('lc'),type:f.type,desc:f.category,category:f.category,amount:f.amount,date:todayStr(),purchaseDate:todayStr(),status:'realizado',installments:1,installmentNum:1,groupId:null,cardId:null,receipt:null,trashed:false,applied:false};state.lancamentos.push(rec);applyLancEffect(rec);logHist('Registro confirmado por voz: '+f.category);save();await DBStore.flush();render();DB.say(DB.salaryReceipt(rec))}else if(/nao|cancela/.test(t)){DB.flow=null;DB.say('Certo, Jhony. Não registrei.')}else DB.say('Diga sim para confirmar ou cancelar.');return true}
 return dbPreviousHandle(text)};
 DB.scheduleListen=function(){clearTimeout(DB.listenTimer);if(!DB.voice||DB.speaking||DB.processing||DB.recActive||document.hidden||document.getElementById('sheet').classList.contains('show'))return;DB.listenTimer=setTimeout(DB.listen,350)};
 DB.listen=function(){if(!DB.voice||DB.speaking||DB.processing||DB.recActive||document.hidden)return;try{DB.rec.start()}catch(e){if(e.name!=='InvalidStateError'){DB.stopVoice();DB.voiceStatus('Não foi possível iniciar o microfone. Tente novamente.')}}};
@@ -1541,6 +1541,58 @@ DB.healthHTML=function(){return `<div class="card"><h3>Dados e recuperação</h3
 const dbSettingsRepair=DB.settings;DB.settings=function(){return DB.healthHTML()+dbSettingsRepair().replace('Resumo falado na primeira abertura desbloqueada a partir das 5h. Se o navegador bloquear o áudio, use Ouvir lembretes.','A DIdI só fala quando você inicia a conversa ou toca em Ouvir lembretes.')};
 DB.privacy();
 
+// Recover payment sharing from the pre-redesign app (30 October).
+(function(){
+const prior=DB.handle;
+DB.shareReport=function(text){
+  const t=DB.norm(text),months=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const all=/geral|gerais|todos os meses|todos os periodos|tudo previsto/.test(t);
+  const explicit=months.some(m=>t.includes(m))||/mes|anterior|passado|proximo|20\d{2}/.test(t);
+  const month=all?null:(explicit?DB.parseMonth(t):todayStr().slice(0,7));
+  const type=/receber|recebimento|entrada/.test(t)&&!/pagar|pagamento|despes/.test(t)?'entrada':'saida';
+  const planned=/previs|a pagar|a receber|vou pagar|vou receber/.test(t);
+  const aliases={alessandra:'alessandra',ale:'alessandra',ali:'alessandra',dione:'dione',...(state.nameAliases||{})};
+  const words=t.split(/[^a-z0-9]+/);
+  let person=Object.entries(aliases).find(([name])=>(' '+t+' ').includes(' '+DB.norm(name)+' '))?.[1];
+  const cats=type==='saida'?state.categoriesOut:state.categoriesIn;
+  const category=cats.find(c=>t.includes(DB.norm(c)));
+  const stop=new Set(('didi dione envie enviar envair manda mande mandar compartilhe compartilhar previsao previsoes previsto previstos previstas pagamentos pagamento recebimentos recebimento pagar receber despesas despesa gastos gasto saidas saida entradas entrada geral gerais todos todas tudo periodos periodo meses mes ano anos hoje atual anterior passado proximo pelo pela para pra por com que quero favor whatsapp whats zap do da de dos das no na em ao as os e o a '+months.join(' ')).split(' '));
+  const free=!person&&!category?words.filter(w=>w.length>2&&!stop.has(w)&&!/^\d+$/.test(w)).join(' '):'';
+  const term=DB.norm(person||free);
+  const items=activeLanc().filter(l=>l.type===type&&(planned?!l.applied:!!l.applied)&&(!month||String(l.date).startsWith(month))&&(!category||l.category===category)&&(!term||DB.norm(l.desc||'').includes(term))).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const total=items.reduce((s,l)=>s+Number(l.amount||0),0);
+  const label=(planned?(type==='saida'?'Despesas previstas':'Recebimentos previstos'):(type==='saida'?'Saídas realizadas':'Entradas realizadas'))+' — '+(month?DB.monthLabel(month):'todos os períodos')+(term?' — '+(person||free):'')+(category?' — '+category:'');
+  const message='*'+label+'*\n\n'+(items.map(l=>'- '+(l.desc||'(sem descrição)')+' ('+(l.category||'')+') — '+DB.rawMoney(l.amount)+' — '+fmtDate(l.date)).join('\n')||'(nada encontrado)')+'\n\n*Total: '+DB.rawMoney(total)+'*';
+  const contacts=term?(state.contatos||[]).filter(c=>{const n=DB.norm(c.name||c.nome||'');return n===term||n.startsWith(term+' ')}):[];
+  let phone=contacts.length===1?String(contacts[0].phone||contacts[0].telefone||contacts[0].tel||'').replace(/\D/g,''):'';
+  if(!/^\d{10,15}$/.test(phone))phone='';
+  else if(phone.length===10||phone.length===11)phone='55'+phone;
+  return {items,total,message,label,url:'https://wa.me/'+phone+'?text='+encodeURIComponent(message)};
+};
+DB.openPaymentWhatsApp=function(){if(!DB.lastShare)return;DB.stopVoice();const w=window.open(DB.lastShare.url,'_blank','noopener');return w};
+DB.preparePaymentShare=function(text){
+  const r=DB.shareReport(text);DB.flow=null;DB.lastShare=r;
+  openSheet(r.label,'<p>'+r.items.length+' lançamentos · Total: <b>'+DB.esc(DB.rawMoney(r.total))+'</b></p><div style="white-space:pre-wrap;overflow-wrap:anywhere">'+DB.esc(r.message)+'</div><a class="btn block" style="margin-top:14px" href="'+DB.esc(r.url)+'" target="_blank" rel="noopener" onclick="DB.stopVoice()">Abrir no WhatsApp</a>');
+  DB.say('Jhony, preparei '+r.items.length+' lançamentos, total de '+DB.rawMoney(r.total)+'. Vou abrir o WhatsApp com a mensagem pronta para você enviar. Se não abrir, toque em Abrir no WhatsApp.');
+  DB.openPaymentWhatsApp();
+};
+DB.handle=async function(text){const t=DB.norm(text);if(/envi|envair|mand[aeor]|compartilh/.test(t)&&/previs|pagamento|recebimento|despes|gasto|entrada|saida/.test(t)){DB.preparePaymentShare(text);return true}if(DB.lastShare&&/^(enviar|envie|mandar|mande|abrir|abra)( no| pelo| por| o)? (whatsapp|zap)$/.test(t)){DB.openPaymentWhatsApp();return true}return prior(text)};
+})();
+
+(function(){
+DB.salaryCategory=function(value){const n=DB.norm(value||'').replace(/^(?:foi|e|era|uma?|em|de|categoria)\s+/g,'').replace(/^(?:uma?|em|de)\s+/g,'').trim();if(/^(vale|adiantamento|adiantamento salarial|vale salarial|vale de salario)$/.test(n))return 'Vale';if(/^(salario|salario mensal|meu salario)$/.test(n))return 'Salário';return null};
+const applyBeforeSalary=applyLancEffect;
+applyLancEffect=function(l){if(l.applied)return;if(l.type==='entrada'){const category=DB.salaryCategory(l.category);if(category)l.category=category}applyBeforeSalary(l);if(l.type==='entrada'&&(l.category==='Vale'||l.category==='Salário')){state.pendingSalaryDeduction=DB.roundMoney(state.pendingSalaryDeduction||0);if(l._consumedVale!=null)l._consumedVale=DB.roundMoney(l._consumedVale);if(l._creditedAmount!=null)l._creditedAmount=DB.roundMoney(l._creditedAmount)}};
+DB.salaryReceipt=function(l){if(l.category==='Vale'&&l.type==='entrada')return 'Salvei, Jhony. Vale de '+DB.rawMoney(l.amount)+' recebido. Há '+DB.rawMoney(state.pendingSalaryDeduction)+' para descontar dos próximos salários.';if(l.category==='Salário'&&l.type==='entrada')return 'Salvei, Jhony. Salário de '+DB.rawMoney(l.amount)+', desconto de vale de '+DB.rawMoney(l._consumedVale||0)+'. Entraram '+DB.rawMoney(l._creditedAmount??l.amount)+' no saldo.';return 'Salvei, Jhony. '+DB.rawMoney(l.amount)+' em '+l.category+'.'};
+const handleBeforeSalary=DB.handle;
+DB.handle=async function(text){const t=DB.norm(text);if(DB.flow?.stage==='financial-category'&&DB.flow.type==='entrada'){const cat=DB.salaryCategory(t);if(cat)return handleBeforeSalary(cat)}if(!DB.flow&&!/envi|mand|compartilh/.test(t)&&/\b(?:recebi|ganhei|entrou|entrada|registrar|lancar|anotar)\b/.test(t)&&/\b(?:vale|salario|adiantamento)\b/.test(t)){const m=t.match(/(?:r\$\s*)?\d+(?:[.,]\d+)*/);if(m){const category=/\bvale\b|adiantamento/.test(t)?'Vale':'Salário';return handleBeforeSalary('recebi '+m[0]+' em '+category)}}return handleBeforeSalary(text)};
+const salaryHome=renderSituacao;
+renderSituacao=function(){const html=salaryHome();const pending=Number(state.pendingSalaryDeduction||0);return (pending>0?'<div class="card"><strong>Vale pendente: '+DB.esc(DB.rawMoney(pending))+'</strong><p class="muted">Este adiantamento será descontado quando você confirmar o recebimento do salário.</p></div>':'')+html};
+const salaryForm=openLancForm;
+openLancForm=function(...args){salaryForm(...args);const cat=document.getElementById('f_cat');if(!cat)return;const note=document.createElement('p');note.id='salary-preview';note.className='muted';note.setAttribute('role','status');cat.after(note);const update=()=>{const type=document.getElementById('f_type_es').value,category=DB.salaryCategory(cat.value),amount=DB.parseAmount(document.getElementById('f_amount').value)||0;let pending=Number(state.pendingSalaryDeduction||0);const original=args[0]?state.lancamentos.find(l=>l.id===args[0]):null;if(original?.applied&&original.category==='Salário')pending+=Number(original._consumedVale||0);if(original?.applied&&original.category==='Vale')pending=Math.max(0,pending-Number(original.amount||0));note.textContent=type!=='entrada'?'':category==='Vale'?'Ao confirmar o recebimento, este vale entra no saldo e fica anotado para desconto no salário.':category==='Salário'?'Informe o salário antes do desconto do vale. Vale pendente: '+DB.rawMoney(pending)+'. Desconto: '+DB.rawMoney(Math.min(amount,pending))+'. Valor líquido a creditar: '+DB.rawMoney(Math.max(0,amount-pending))+'.':''};for(const id of ['f_type_es','f_cat','f_amount','f_status']){document.getElementById(id)?.addEventListener('change',update);document.getElementById(id)?.addEventListener('input',update)}update()};
+})();
+
 </script>
 </body>
 </html>
+
