@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="db-version" content="04-NOV-CORRECAO-16">
+<meta name="db-version" content="05-NOV-CARTOES-TEMPO-2">
 <title>App Pessoal Dione</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230F3D3E'/%3E%3Ctext x='50' y='66' font-size='54' text-anchor='middle' fill='%23C9973A' font-family='Georgia'%3ED%3C/text%3E%3C/svg%3E">
@@ -133,7 +133,7 @@ body:not(.db-dark){--bg:#f7f6f1;--ink:#163f3c;--teal:#185b4e;--teal-dark:#174c40
 :root{color-scheme:light}.db-dark{color-scheme:dark}.formSheet .sheetBody{background:var(--panel);color:var(--ink);padding-bottom:max(28px,env(safe-area-inset-bottom));}.sheetBody label,.sheetBody label.f,.sheetBody h3,.sheetHead h3,.sheetBody p{color:var(--ink)!important}.sheetBody .muted{color:var(--ink-soft)!important}.sheetBody input,.sheetBody textarea,.sheetBody select,input.f,textarea.f,select.f,.db-field{background:var(--panel)!important;color:var(--ink)!important;border:1px solid var(--line);font-size:16px!important;caret-color:var(--ink)}.sheetBody input::placeholder,.sheetBody textarea::placeholder{color:var(--ink-soft)}.sheetBody .sheetHead .x{color:var(--ink)}.sheetBody .btn{min-height:44px}.db-hidden .db-money{font-size:inherit!important;letter-spacing:normal!important}.db-hidden .db-money:after{content:none}.db-hide-balance .db-home-value .db-money{font-size:0!important;user-select:none}.db-hide-balance .db-home-value .db-money:after{content:'••••••';font-size:28px;letter-spacing:3px}.db-dark .card h3,.db-dark .db-home-spending h3,.db-dark .db-home-assets h3{color:#cce9da!important}.db-dark .db-settings,.db-dark .sheetBody{color:#edf5ef}.db-dark .alertItem{color:#edf5ef}.db-dark .alertItem.info{background:#244435}.db-dark .alertItem.warn{background:#51421e}.db-dark .alertItem.danger{background:#4e2d28}#db-storage-status{padding:5px 14px;font-size:11px;color:var(--ink-soft);background:var(--bg)}#db-storage-status.db-store-error{background:#fff0c9;color:#633f11}.db-dark #db-storage-status.db-store-error{background:#51421e;color:#ffe7b2}.db-home-totals .big{overflow-wrap:anywhere}.db-talk{touch-action:manipulation}#didiPanel{height:min(650px,75dvh)}.sheetBody{scroll-padding-bottom:90px}.db-dark .db-home-totals .card{border-color:var(--line)}
 </style><style>main .card{font-size:14px;line-height:1.5}main .card h3,.sheetHead h3{line-height:1.35}main .muted,.sheetBody .muted{font-size:13px;line-height:1.5}.sheetBody label.f{font-size:14px;line-height:1.4}.didiMsg{font-size:14px;line-height:1.55;overflow-wrap:anywhere}.db-pay-title{line-height:1.4}.db-pay-list small{line-height:1.5}.db-vale-note small{font-size:12px!important}</style>
 <style>@media(max-width:480px){header.top{flex-wrap:nowrap;gap:7px;padding:10px}header.top .title{min-width:0;flex:1}header.top .title b{font-size:12px;line-height:1.3}header.top .menuBtn,header.top>.lockBtn{flex-shrink:0}header.top #db-eye{font-size:11px;white-space:nowrap;padding:8px 9px;width:auto;gap:3px}}</style>
-</head>
+<style>.db-home .db-home-balance{min-height:0;padding:16px 20px!important}.db-home .db-home-balance h3{margin:0 0 7px}.db-home .db-home-balance .big{font-size:28px;margin:0 0 5px}.db-home-balance:after{width:125px;height:125px;top:-30px}.db-weather-single h2{font-size:19px;line-height:1.4}.db-weather-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}.db-weather-metrics>div{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 8px}.db-weather-metrics small{display:block;font-size:11px;color:var(--ink-soft)}.db-weather-metrics strong{display:block;font-size:18px;margin-top:8px}.db-weather-single .muted{font-size:12px;overflow-wrap:anywhere}</style></head>
 <body>
 
 <div id="lockScreen">
@@ -617,7 +617,7 @@ function openLancForm(id, presetCardId, presetDate){
     <label class="f">Descrição</label><input class="f" id="f_desc" value="${it.desc}">
     <label class="f">Categoria</label><select class="f" id="f_cat">${cats.map(c=>`<option ${c===it.category?'selected':''}>${c}</option>`).join('')}</select>
     <label class="f">Valor total (R$)</label><input class="f" id="f_amount" type="text" inputmode="decimal" value="${it.amount}" oninput="updateParcPreview()">
-    <label class="f">Data</label><input class="f" id="f_date" type="date" value="${it.date}" onchange="updateParcPreview()">
+    <label class="f">Data</label><input class="f" id="f_date" type="date" value="${it.purchaseDate||it.date}" onchange="updateParcPreview()">
     <label class="f">Status</label><select class="f" id="f_status"><option value="previsto" ${it.status==='previsto'?'selected':''}>Previsto</option><option value="realizado" ${it.status==='realizado'?'selected':''}>Realizado</option></select>
     <div id="parceladoBlock" style="display:${it.type==='saida'?'block':'none'}">
       <label class="f">Tipo de pagamento</label><select class="f" id="f_ptype" onchange="document.getElementById('parcBox').style.display=this.value==='parcelado'?'block':'none';updateParcPreview()"><option value="avista" ${(!it.installments||it.installments<=1)?'selected':''}>À vista</option><option value="parcelado" ${it.installments>1?'selected':''}>Parcelado</option></select>
@@ -693,7 +693,7 @@ function saveLanc(id){
         const dDate = n===1 ? firstDueDate : addMonthsIso(firstDueDate, n-1);
         let stat = n===1 ? status : 'previsto';
         // Keep the status explicitly selected by the user.
-        const rec = {id:uid('lc'),type,desc,category,amount:per,date:dDate,purchaseDate:date,status:stat,installments,installmentNum:n,groupId,cardId,receipt:n===1?receiptData:null,trashed:false,applied:false};
+        const rec = {id:uid('lc'),type,desc,category,amount:DB.installmentAmount(amount,installments,n),date:dDate,purchaseDate:date,status:stat,installments,installmentNum:n,groupId,cardId,receipt:n===1?receiptData:null,trashed:false,applied:false};
         state.lancamentos.push(rec);
         if(n===1) firstRecord = rec;
       }
@@ -767,8 +767,10 @@ function renderCartoes(){
         <button class="btn small outline" onclick="openCardForm('${c.id}')">Editar cartão</button>
       </div>
 
+      ${DB.cardPurchasesHTML(c)}
       <hr class="sep">
-      <h3 style="margin-top:0">Faturas lançadas para frente</h3>
+      <h3 style="margin-top:0">Faturas informadas manualmente</h3>
+      <p class="muted">Use apenas para valores que não estejam nas compras acima.</p>
       ${invoicesSorted.length? invoicesSorted.map(inv=>{
         const restante = Math.max(0, inv.amount - inv.paidAmount);
         const pct = inv.amount>0? Math.min(100,(inv.paidAmount/inv.amount)*100):0;
@@ -796,7 +798,7 @@ function openInvoiceForm(cardId){
 }
 function saveInvoice(cardId){
   const month=document.getElementById('f_month').value;
-  const amount=parseFloat(document.getElementById('f_amount').value)||0;
+  const amount=DB.parseAmount(document.getElementById('f_amount').value)||0;
   if(!month||amount<=0){ toast("Preencha mês e valor"); return; }
   snapshot();
   const c = cardById(cardId); ensureInvoices(c);
@@ -813,7 +815,7 @@ function openInvoicePayment(cardId, invoiceId){
     <button class="btn block" style="margin-top:16px" onclick="savePayment('${cardId}','${invoiceId}')">Confirmar baixa</button>`);
 }
 function savePayment(cardId, invoiceId){
-  const amount=parseFloat(document.getElementById('f_amount').value)||0;
+  const amount=DB.parseAmount(document.getElementById('f_amount').value)||0;
   if(amount<=0){ toast("Valor inválido"); return; }
   snapshot();
   const c = cardById(cardId); const inv = c.invoices.find(i=>i.id===invoiceId);
@@ -1506,7 +1508,7 @@ runAutoLancamentos=function(){};runAutoDebts=function(){};
 fmt=originalFmt;
 DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
 const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
-DB.currentVersion='04-NOV-CORRECAO-16';
+DB.currentVersion='05-NOV-CARTOES-TEMPO-2';
 DB.storageReady=DBStore.init();
 save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
 const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
@@ -1530,7 +1532,7 @@ const dbFinancialHandle=DBOriginalHandle;
 DB.dispatch=async function(text){if(DB.processing)return;const original=String(text||'').trim();if(!original)return;DB.processing=true;DB.addVoiceUser(original);try{const handled=await DB.handle(original);if(!handled){window.DBDispatching=true;try{dbFinancialHandle(original)}finally{window.DBDispatching=false}}}catch(e){DB.flow=null;DB.say('Jhony, não consegui concluir: '+(e.message||'tente novamente')+'.')}finally{DB.processing=false;if(DB.voice&&!DB.speaking)DB.scheduleListen()}};
 const dbPreviousHandle=DB.handle;
 DB.handle=async function(text){let t=DB.norm(text).replace(/\b(?:didi|dione)\b/g,'').trim();if(/\b(bom dia|boa tarde|boa noite)\b/.test(t)){DB.flow=null;window.__didiPending=null;const greeting=/bom dia/.test(t)?'Bom dia':/boa tarde/.test(t)?'Boa tarde':'Boa noite';DB.say(greeting+', Jhony. Como posso lhe ajudar?');return true}if(/^(oi|ola|oie|ei|tudo bem)$/.test(t)){DB.say('Olá, Jhony. Como posso lhe ajudar?');return true}if(/obrigad/.test(t)){DB.say('Por nada, Jhony. O que mais você precisa?');return true}if(/^(ajuda|o que voce faz|o que posso pedir|comandos)$/.test(t)){DB.say('Jhony, você pode consultar saldo, pagamentos de qualquer mês, cartões, agenda, viagens, tempo e cotações; registrar gastos e entradas; e cadastrar compromissos. Diga parar quando terminar.');return true}if(/(?:pagamento|pagamentos|contas|vencimentos|\bpagar\b|pagarei)/.test(t)&&!DB.flow){if(/\b20\d{2}\b/.test(t)||/janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|mes|anterior|passado|proximo/.test(t)){const m=DB.parseMonth(t),p=DB.payments(m);DB.month=m;goTab('previsao');DB.say('Jhony, em '+DB.monthLabel(m)+', os lançamentos pagos somam '+DB.rawMoney(p.paidTotal)+' e os compromissos em aberto somam '+DB.rawMoney(p.pendingTotal)+'. '+(p.pending.length?p.pending.slice(0,6).map(x=>x.desc+': '+DB.rawMoney(x.amount)).join('; '):'Não há pendências registradas para esse mês.')+' O saldo importado não foi alterado.');return true}DB.flow={stage:'payment-month'};DB.say('De qual mês e ano, Jhony?');return true}if(DB.flow?.stage==='payment-month'){DB.flow=null;return DB.handle('pagamentos de '+text)}if(/^(?:saldo|meu saldo|qual (?:e )?(?:o )?(?:meu )?saldo|quanto tenho(?: na conta)?)$/.test(t)){DB.say('Jhony, seu saldo disponível é '+DB.rawMoney(state.saldo)+'.');return true}if(/(?:recebi|ganhei|entrou|gastei|paguei|comprei)/.test(t)&&!DB.flow){const match=t.match(/(?:r\$\s*)?\d+(?:[.,]\d+)*/);if(match){const amount=DB.parseAmount(match[0]);if(!(amount>0)){DB.say('Não entendi o valor. Diga, por exemplo, paguei 25 reais no mercado.');return true}const type=/recebi|ganhei|entrou/.test(t)?'entrada':'saida';const cats=type==='entrada'?state.categoriesIn:state.categoriesOut;const category=cats.find(c=>DB.norm(c).split(/\s+/).some(w=>w.length>3&&t.includes(w)));DB.flow={stage:'financial-category',type,amount,desc:text};if(category){DB.flow.category=category;DB.flow.stage='financial-confirm';DB.say('Registrar '+(type==='entrada'?'entrada':'despesa')+' de '+DB.rawMoney(amount)+' em '+category+'?')}else DB.say('Em qual categoria, Jhony?');return true}}
-if(DB.flow?.stage==='financial-category'){DB.flow.category=state[DB.flow.type==='entrada'?'categoriesIn':'categoriesOut'].find(c=>DB.norm(c)===t)||text;DB.flow.stage='financial-confirm';DB.say('Confirmar '+DB.rawMoney(DB.flow.amount)+' em '+DB.flow.category+'?');return true}if(DB.flow?.stage==='financial-confirm'){if(/^(sim|confirmo|confirmar|pode|pode salvar|salvar|isso|ok)$/.test(t)){const f=DB.flow;DB.flow=null;snapshot();const rec={id:uid('lc'),type:f.type,desc:f.category,category:f.category,amount:f.amount,date:todayStr(),purchaseDate:todayStr(),status:'realizado',installments:1,installmentNum:1,groupId:null,cardId:null,receipt:null,trashed:false,applied:false};state.lancamentos.push(rec);applyLancEffect(rec);logHist('Registro confirmado por voz: '+f.category);save();await DBStore.flush();render();DB.say(DB.salaryReceipt(rec))}else if(/nao|cancela/.test(t)){DB.flow=null;DB.say('Certo, Jhony. Não registrei.')}else DB.say('Diga sim para confirmar ou cancelar.');return true}
+if(DB.flow?.stage==='financial-category'){DB.flow.category=state[DB.flow.type==='entrada'?'categoriesIn':'categoriesOut'].find(c=>DB.norm(c)===t)||text;DB.flow.stage='financial-confirm';DB.say('Confirmar '+DB.rawMoney(DB.flow.amount)+' em '+DB.flow.category+'?');return true}if(DB.flow?.stage==='financial-confirm'){if(/^(sim|confirmo|confirmar|pode|pode salvar|salvar|isso|ok)$/.test(t)){const f=DB.flow;DB.flow=null;snapshot();const rec={id:uid('lc'),type:f.type,desc:f.category,category:f.category,amount:f.amount,date:todayStr(),purchaseDate:todayStr(),status:f.cardId?'previsto':'realizado',installments:1,installmentNum:1,groupId:null,cardId:f.cardId||null,receipt:null,trashed:false,applied:false};if(f.cardId)rec.date=computeCardDueDate(rec.purchaseDate,cardById(f.cardId));state.lancamentos.push(rec);if(!rec.cardId)applyLancEffect(rec);logHist('Registro confirmado por voz: '+f.category);save();await DBStore.flush();render();DB.say(DB.salaryReceipt(rec))}else if(/nao|cancela/.test(t)){DB.flow=null;DB.say('Certo, Jhony. Não registrei.')}else DB.say('Diga sim para confirmar ou cancelar.');return true}
 return dbPreviousHandle(text)};
 DB.scheduleListen=function(){clearTimeout(DB.listenTimer);if(!DB.voice||DB.speaking||DB.processing||DB.recActive||document.hidden||document.getElementById('sheet').classList.contains('show'))return;DB.listenTimer=setTimeout(DB.listen,350)};
 DB.listen=function(){if(!DB.voice||DB.speaking||DB.processing||DB.recActive||document.hidden)return;try{DB.rec.start()}catch(e){if(e.name!=='InvalidStateError'){DB.stopVoice();DB.voiceStatus('Não foi possível iniciar o microfone. Tente novamente.')}}};
@@ -1768,7 +1770,55 @@ DB.deleteCallContact=async function(index){
 };
 })();
 
+(function(){
+DB.installmentAmount=function(total,count,number){const cents=Math.round(Number(total)*100);return (Math.floor(cents/count)+(number<=cents%count?1:0))/100};
+DB.cardPurchases=function(cardId,month){return activeLanc().filter(l=>l.type==='saida'&&l.cardId===cardId&&(!month||String(l.date).startsWith(month)))};
+DB.cardPurchasesHTML=function(card){const groups={};for(const l of DB.cardPurchases(card.id)){const month=String(l.date).slice(0,7);if(!/^\d{4}-\d{2}$/.test(month))continue;(groups[month]??=[]).push(l)}const months=Object.keys(groups).sort();return '<div class="db-card-purchases"><h3>Faturas das compras</h3><p class="muted">A compra utiliza o limite do cartão. O saldo da conta só diminui quando você confirma o pagamento.</p>'+months.map(month=>{const items=groups[month],pending=items.filter(l=>!l.applied),paid=items.filter(l=>l.applied),total=items.reduce((s,l)=>s+Number(l.amount||0),0),open=pending.reduce((s,l)=>s+Number(l.amount||0),0);return '<details class="db-invoice-month" '+(open>0?'open':'')+'><summary><strong>'+DB.esc(DB.monthLabel(month))+'</strong><span>'+DB.esc(DB.rawMoney(open))+' em aberto</span></summary><div class="row"><span>Total das compras</span><b>'+DB.esc(DB.rawMoney(total))+'</b></div><div class="row"><span>Pago</span><b>'+DB.esc(DB.rawMoney(paid.reduce((s,l)=>s+Number(l.amount||0),0)))+'</b></div><ul class="db-pay-list">'+items.map(l=>'<li><div><span class="db-pay-title">'+DB.esc(l.desc)+'</span><small>Vencimento: '+DB.esc(fmtDate(l.date))+(l.installments>1?' · Parcela '+l.installmentNum+'/'+l.installments:'')+'</small><span class="db-pay-status">'+(l.applied?'Pago':'Na fatura')+'</span></div><span class="db-pay-amount">'+DB.esc(DB.rawMoney(l.amount))+'</span></li>').join('')+'</ul>'+(pending.length?'<button class="btn small block" style="margin-top:12px" data-card="'+DB.esc(card.id)+'" data-month="'+month+'" onclick="DB.payCardPurchases(this.dataset.card,this.dataset.month)">Confirmar pagamento dessas compras</button>':'')+'</details>'}).join('')+(months.length?'':'<p class="muted">Nenhuma compra registrada neste cartão.</p>')+'</div>'};
+DB.payCardPurchases=async function(cardId,month){const card=cardById(cardId);if(!card)return;const pending=DB.cardPurchases(cardId,month).filter(l=>!l.applied),total=DB.roundMoney(pending.reduce((s,l)=>s+Number(l.amount||0),0));if(!pending.length||total<=0)return toast('Essas compras já estão pagas.');if(!confirm('Você já pagou '+DB.rawMoney(total)+' dessas compras de '+card.name+', fatura de '+DB.monthLabel(month)+'? Confirmar descontará esse valor do saldo da conta.'))return;snapshot();pending.forEach(l=>applyLancEffect(l));logHist('Pagamento confirmado das compras de '+card.name+' · '+month+' · '+DB.rawMoney(total));save();await DBStore.flush();render();toast('Pagamento registrado. Saldo e limite atualizados.')};
+const beforeCreditForm=openLancForm;
+openLancForm=function(id,...rest){beforeCreditForm(id,...rest);const card=document.getElementById('f_card'),status=document.getElementById('f_status');if(!card||!status)return;DB.creditEditingId=id||null;DB.creditCashStatus=status.value;DB.creditFormUpdate=function(){const existing=DB.creditEditingId?state.lancamentos.find(l=>l.id===DB.creditEditingId):null,type=document.getElementById('f_type_es').value,selected=type==='saida'&&card.value?cardById(card.value):null;let note=document.getElementById('db-credit-note');if(!note){note=document.createElement('p');note.id='db-credit-note';note.className='db-credit-note';card.after(note)}const unpaid=!!selected&&!existing?.applied;status.disabled=unpaid;status.querySelector('[value="previsto"]').textContent=selected?'Na fatura (não paga)':'Previsto';if(unpaid)status.value='previsto';if(!selected&&DB.creditSelectedBefore)status.value=DB.creditCashStatus;DB.creditSelectedBefore=!!selected;const date=document.getElementById('f_date').value;if(selected){const due=date?computeCardDueDate(date,selected):null;note.textContent=existing?.applied?'Este lançamento já foi pago. Alterar ou estornar pode ajustar o saldo da conta.':'Compra em '+selected.name+(due?' · primeira cobrança em '+fmtDate(due):'')+'. O valor entra na fatura e utiliza o limite; não sai do saldo da conta ao salvar.'}else note.textContent='Sem cartão selecionado: uma saída realizada será descontada do saldo da conta.';const preview=document.getElementById('parcPreview');if(selected&&preview&&document.getElementById('f_ptype').value==='parcelado'){const total=DB.parseAmount(document.getElementById('f_amount').value)||0,n=Math.max(2,Number(document.getElementById('f_installments').value)||2);preview.textContent=n+' parcelas, total de '+DB.rawMoney(total)+', na fatura de '+selected.name+'. Nenhuma parcela é paga automaticamente.'}};for(const id of ['f_card','f_type_es','f_date','f_amount','f_ptype','f_installments'])for(const event of ['change','input'])document.getElementById(id)?.addEventListener(event,DB.creditFormUpdate);DB.creditFormUpdate()};
+const beforeSaveCredit=saveLanc;
+saveLanc=function(id){const type=document.getElementById('f_type_es')?.value,cardId=document.getElementById('f_card')?.value,old=id?state.lancamentos.find(l=>l.id===id):null;if(type==='saida'&&cardId){if(!cardById(cardId))return toast('Selecione um cartão válido.');if(!old?.applied)document.getElementById('f_status').value='previsto'}return beforeSaveCredit(id)};
+const receiptBeforeCredit=DB.salaryReceipt;DB.salaryReceipt=function(l){if(l.type==='saida'&&l.cardId&&!l.applied){const card=cardById(l.cardId);return 'Jhony, compra de '+DB.rawMoney(l.amount)+' registrada na fatura de '+(card?.name||'seu cartão')+', vencimento '+fmtDate(l.date)+'. O saldo da conta não foi alterado.'}return receiptBeforeCredit(l)};
+const beforeCreditVoice=DB.handle;
+DB.handle=async function(text){const t=DB.norm(text);let card=null;if(!DB.flow&&/\b(?:gastei|comprei|paguei|registrar|lancar|anotar)\b/.test(t)&&/\d/.test(t)&&!/\b(?:fatura|quitar|quitei)\b/.test(t)){const matches=state.cards.filter(c=>{const name=DB.norm(c.name||'');return t.includes(name)||name.split(/\s+/).some(w=>w.length>=4&&!['cartao','credito','dione','debito'].includes(w)&&new RegExp('\\b'+w+'\\b').test(t))});if(matches.length===1)card=matches[0]}const handled=await beforeCreditVoice(text);if(card&&DB.flow&&['financial-category','financial-confirm'].includes(DB.flow.stage)&&DB.flow.type==='saida'){DB.flow.cardId=card.id;DB.say('Essa compra será registrada na fatura de '+card.name+', sem desconto no saldo agora. '+(DB.flow.stage==='financial-confirm'?'Diga sim para confirmar ou cancelar.':'De qual categoria?'))}return handled};
+const beforeInvoicePayment=savePayment;
+savePayment=function(cardId,invoiceId){const inv=cardById(cardId)?.invoices?.find(i=>i.id===invoiceId);if(!inv)return;const remaining=DB.roundMoney(Math.max(0,Number(inv.amount||0)-Number(inv.paidAmount||0))),amount=DB.parseAmount(document.getElementById('f_amount').value)||0;if(remaining<=0)return toast('Essa fatura já está paga.');if(amount>remaining)return toast('O pagamento não pode ultrapassar o restante da fatura.');return beforeInvoicePayment(cardId,invoiceId)};
+const style=document.createElement('style');style.textContent='.db-credit-note{font-size:13px;line-height:1.5;padding:12px;background:var(--gold-soft);color:var(--ink);border-radius:10px}.db-invoice-month{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px}.db-invoice-month summary{display:flex;justify-content:space-between;gap:10px;cursor:pointer;font-size:13px;flex-wrap:wrap}.db-invoice-month summary span{color:var(--ink-soft)}';document.head.append(style);
+})();
+
 </script>
-</body>
+<script>
+(function(){
+DB.weatherRequest=null;
+DB.weatherSelection=function(text,now=new Date()){
+ const t=DB.norm(text),base=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12);let date=null;
+ if(/\bsemana\b|proximos (?:sete|7) dias/.test(t))return {date:null};
+ if(/depois de amanha/.test(t)){base.setDate(base.getDate()+2);date=base}
+ else if(/\bamanha\b/.test(t)){base.setDate(base.getDate()+1);date=base}
+ else if(/\bhoje\b/.test(t))date=base;
+ else {const m=t.match(/\b(?:dia\s+)?(\d{1,2})(?:\s*(?:\/|de)\s*(\d{1,2}|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s*(?:\/|de)\s*(\d{4}))?)?\b/);
+ if(m){const names=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];let month=m[2]?(isNaN(Number(m[2]))?names.indexOf(m[2]):Number(m[2])-1):base.getMonth();date=new Date(m[3]?+m[3]:base.getFullYear(),month,+m[1],12);if(!m[2]&&date<base)date.setMonth(date.getMonth()+1);if(date.getDate()!==+m[1])return {date:'invalid'}}
+ else {const days=['domingo','segunda','terca','quarta','quinta','sexta','sabado'];const day=days.findIndex(x=>new RegExp('\\b'+x+'(?:-feira)?\\b').test(t));if(day>=0){let delta=(day-base.getDay()+7)%7;if(!delta&&/proxim/.test(t))delta=7;base.setDate(base.getDate()+delta);date=base}}
+ }
+ return {date:date?date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0'):null};
+};
+DB.weatherDayIndex=()=>DB.weather?.daily?.time.indexOf(DB.weatherRequest?.date)??-1;
+const weekHTML=DB.weatherHTML,weekSpeech=DB.weatherSpeech;
+DB.weatherHTML=function(){if(!DB.weatherRequest?.date)return weekHTML();const w=DB.weather,i=DB.weatherDayIndex();if(!w)return weekHTML();if(i<0)return '<div class="card"><h3>Previsão do tempo</h3><p>Não há previsão disponível para a data solicitada. A consulta cobre os próximos sete dias.</p></div>';const day=new Date(w.daily.time[i]+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});return `<div class="card db-weather-single"><h3>Previsão do tempo</h3><p class="muted">${DB.esc(w.place)}</p><h2>${DB.esc(day)}</h2><p>${DB.esc(DB.weatherCode(w.daily.weather_code[i]))}</p><div class="db-weather-metrics"><div><small>Mínima</small><strong>${Math.round(w.daily.temperature_2m_min[i])} °C</strong></div><div><small>Máxima</small><strong>${Math.round(w.daily.temperature_2m_max[i])} °C</strong></div><div><small>Chance de chuva</small><strong>${w.daily.precipitation_probability_max[i]??'—'}%</strong></div></div><p class="muted">Open-Meteo · atualizado em ${new Date(w.at).toLocaleString('pt-BR')}</p><button class="btn outline" onclick="DB.weatherRequest=null;render()">Ver semana</button></div>`};
+DB.weatherSpeech=function(){if(!DB.weatherRequest?.date)return weekSpeech();const w=DB.weather,i=DB.weatherDayIndex();if(!w||i<0)return 'Jhony, não há previsão disponível para essa data. A consulta cobre os próximos sete dias.';return 'Jhony, em '+w.place+', '+new Date(w.daily.time[i]+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})+': '+DB.weatherCode(w.daily.weather_code[i])+', mínima de '+Math.round(w.daily.temperature_2m_min[i])+' e máxima de '+Math.round(w.daily.temperature_2m_max[i])+' graus. Chance de chuva de '+(w.daily.precipitation_probability_max[i]??'não informada')+' por cento.'};
+const oldHandle=DB.handle;
+DB.handle=async function(text){const t=DB.norm(text);if(/\btempo\b|\bclima\b|\btemperatura\b|\bchover\b|\bchuva\b/.test(t)){
+ DB.weatherRequest=DB.weatherSelection(text);DB.flow=null;DB.paymentReading=null;window.__didiPending=null;
+ let city=String(text).match(/\b(?:em|para)\s+(?!(?:hoje|amanh[ãa]|o dia|dia|a semana|segunda|ter[cç]a|quarta|quinta|sexta|s[áa]bado|domingo)\b)(.+)/i)?.[1]?.replace(/\s+(?:para|no dia|dia|hoje|amanh[ãa]|depois de|na |nesta |neste |segunda|ter[cç]a|quarta|quinta|sexta|s[áa]bado|domingo|durante|essa semana|esta semana).*$/i,'').replace(/[.!?]+$/,'').trim();
+ goTab('tempo');if(city){const w=await DB.weatherUpdate(city);if(w)DB.say(DB.weatherSpeech())}
+ else if(DB.weather){const loc=DB.weather;const w=await DB.weatherUpdate('',{latitude:loc.latitude,longitude:loc.longitude,name:loc.place});if(w)DB.say(DB.weatherSpeech())}
+ else {DB.flow={stage:'weather-city'};DB.say('De qual cidade você quer a previsão do tempo, Jhony?')}return true;
+ }return oldHandle(text)};
+const choose=DB.chooseCity;DB.chooseCity=async function(i){const w=await choose(i);if(w)DB.say(DB.weatherSpeech());return w};
+})();
+
+</script></body>
 </html>
+
 
