@@ -1953,6 +1953,84 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
   };
 })();
 </script>
+<script>
+/* Correcao pontual: proximos compromissos e proximos aniversarios.
+   Somente consultas de agenda; nenhuma gravacao, visual ou voz e alterada. */
+(function(){
+  'use strict';
+  if(!window.DB || DB._nextEventsOnlyV1) return;
+  DB._nextEventsOnlyV1=true;
+  const previousHandle=DB.handle;
+  const norm=s=>DB.norm(String(s||'')).replace(/\s+/g,' ').trim();
+  const dateString=e=>String(e.date||e.data||e.dataNascimento||e.nascimento||'').slice(0,10);
+  const timeString=e=>String(e.time||e.hora||e.horario||'').trim();
+  const displayName=e=>DB.eventName(e);
+  function upcomingAppointments(now){
+    const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const items=[];
+    for(const e of state.agenda||[]){
+      const raw=dateString(e),hour=timeString(e);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(raw))continue;
+      const time=/^\d{1,2}:\d{2}$/.test(hour)?hour.padStart(5,'0'):'00:00';
+      const d=new Date(raw+'T'+time+':00');
+      if(Number.isNaN(d.getTime()))continue;
+      // Compromisso com horario ja encerrado hoje nao e proximo.
+      if(hour ? d<now : d<start) continue;
+      items.push({e,d,hour});
+    }
+    return items.sort((a,b)=>a.d-b.d);
+  }
+  function upcomingBirthdays(now){
+    const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const items=[];
+    for(const e of state.aniversarios||[]){
+      const raw=dateString(e);
+      const match=raw.match(/(?:^\d{4}-)?(\d{2})-(\d{2})$/);
+      if(!match)continue;
+      const m=Number(match[1]),day=Number(match[2]);
+      let year=today.getFullYear(),d=null;
+      for(let n=0;n<6;n++,year++){
+        const candidate=new Date(year,m-1,day);
+        if(candidate.getMonth()===m-1 && candidate.getDate()===day && candidate>=today){d=candidate;break}
+      }
+      if(d)items.push({e,d});
+    }
+    return items.sort((a,b)=>a.d-b.d);
+  }
+  function response(text){
+    const t=norm(text).replace(/^(?:didi|dione)\s*/,'');
+    // Nao interceptar comandos de criacao, edicao, exclusao ou envio.
+    if(/\b(?:cadastrar|adicionar|criar|marcar|agendar|registrar|salvar|editar|excluir|apagar|remover|enviar|envie|mandar|mande)\b/.test(t))return null;
+    const hasBirthday=/\b(?:aniversario|aniversarios|aniversariante|aniversariantes)\b/.test(t);
+    const hasAppointment=/\b(?:compromisso|compromissos|reuniao|reunioes|evento|eventos)\b/.test(t);
+    // Se o usuario pedir os dois juntos, manter o tratamento anterior.
+    if(hasBirthday===hasAppointment)return null;
+    // Apenas perguntas sobre o futuro sem data especifica; consultas por data continuam no codigo atual.
+    const next=/\b(?:proximo|proxima|proximos|proximas|seguintes|seguinte|futuros|futuras|mais perto|mais proximo|mais proxima)\b/.test(t);
+    if(!next)return null;
+    if(/\b(?:hoje|amanha|ontem|dia\s+\d{1,2}|\d{1,2}\/\d{1,2}|janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/.test(t))return null;
+    const now=new Date();
+    const plural=/\b(?:quais|proximos|proximas|seguintes|futuros|futuras)\b/.test(t);
+    const format=d=>d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    if(hasBirthday){
+      const entries=upcomingBirthdays(now).slice(0,plural?5:1);
+      if(!entries.length)return 'Jhony, nao encontrei proximos aniversarios cadastrados.';
+      return 'Jhony, '+(plural?'os proximos aniversarios sao: ':'o proximo aniversario e: ')+entries.map(x=>displayName(x.e)+', '+format(x.d)).join('; ')+'.';
+    }
+    const entries=upcomingAppointments(now).slice(0,plural?5:1);
+    if(!entries.length)return 'Jhony, nao encontrei proximos compromissos cadastrados.';
+    return 'Jhony, '+(plural?'os proximos compromissos sao: ':'seu proximo compromisso e: ')+entries.map(x=>displayName(x.e)+', '+format(x.d)+(x.hour?', as '+x.hour:'')).join('; ')+'.';
+  }
+  DB.handle=async function(text){
+    // Fluxos de confirmacao existentes continuam tendo prioridade.
+    if(DB.flow)return previousHandle(text);
+    const message=response(text);
+    if(message===null)return previousHandle(text);
+    DB.say(message);
+    return true;
+  };
+})();
+</script>
 </body>
 </html>
 
