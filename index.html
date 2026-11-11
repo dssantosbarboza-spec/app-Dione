@@ -2031,6 +2031,84 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
   };
 })();
 </script>
+<script>
+/* Consultas mensais: somente leitura; ano atual quando omitido. */
+(function(){
+  'use strict';
+  const previous=DB.handle;
+  const months=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const norm=s=>DB.norm(String(s||'')).replace(/\s+/g,' ').trim();
+  DB.queryMonth=function(text){
+    const t=norm(text),now=new Date(),year=t.match(/\b20\d{2}\b/);
+    let m=t.match(/\b(20\d{2})[-/](0?[1-9]|1[0-2])\b/);
+    if(m)return m[1]+'-'+m[2].padStart(2,'0');
+    m=t.match(/\b(0?[1-9]|1[0-2])[-/](20\d{2})\b/);
+    if(m)return m[2]+'-'+m[1].padStart(2,'0');
+    const index=months.findIndex(x=>new RegExp('\\b'+x+'\\b').test(t));
+    if(index>=0)return (year?year[0]:now.getFullYear())+'-'+String(index+1).padStart(2,'0');
+    const d=new Date(now.getFullYear(),now.getMonth(),1);
+    if(/mes passado|mes anterior/.test(t))d.setMonth(d.getMonth()-1);
+    else if(/proximo mes|mes proximo|mes seguinte|mes que vem/.test(t))d.setMonth(d.getMonth()+1);
+    else if(!/\bmes\b/.test(t))return null;
+    return (year?year[0]:d.getFullYear())+'-'+String(d.getMonth()+1).padStart(2,'0');
+  };
+  DB.parseMonth=function(text){return DB.queryMonth(text)||todayStr().slice(0,7)};
+  DB.monthlyQuery=function(text){
+    const t=norm(text).replace(/^(?:didi|dione)[, ]*/, '');
+    if(/\b(?:enviar|envie|envia|mandar|mande|manda|compartilhar|compartilhe|registrar|lancar|anotar|adicionar|salvar|cadastrar|gastei|comprei)\b/.test(t))return null;
+    if(/\b(?:tempo|clima|chuva|chover|temperatura|saldo|cartao|cartoes|fatura)\b/.test(t))return null;
+    const pending=/\b(?:previsao|previsoes|previsto|prevista|previstos|previstas|a pagar|a receber|em aberto)\b/.test(t);
+    const income=/\b(?:entradas?|recebimentos?|receber|recebi|recebido)\b/.test(t);
+    const expense=/\b(?:saidas?|despesas?|gastos?|pagamentos?|pagar|paguei|pago)\b/.test(t);
+    if(!income&&!expense&&!pending)return null;
+    // Números em comandos de registro não são consultas mensais.
+    const month=DB.queryMonth(t);
+    if(!month&&!pending&&!/\b(?:entradas?|saidas?|total|quanto|recebimentos?|pagamentos?)\b/.test(t))return null;
+    return {month,income,expense:expense||pending&&!income,status:pending?'pending':'paid',person:/\b(?:alessandra|ale)\b/.test(t)?'alessandra':null};
+  };
+  DB.showMonthlyQuery=function(q){
+    DB.flow=null;DB.paymentReading=null;DB.month=q.month;
+    DB.financialSelection={month:q.month,income:q.income,expense:q.expense,status:q.status};
+    DB.openFinancialQuery();
+    let r=DB.financialData();
+    if(q.person){
+      const person=l=>[l.pessoa,l.person,l.responsavel,l.beneficiario,l.titular,l.owner,l.nome,l.name,l.desc,l.description].some(v=>/\b(?:alessandra|ale)\b/.test(norm(v)));
+      const incoming=r.incoming.filter(person),outgoing=r.outgoing.filter(person);
+      r={incoming,outgoing,items:r.items.filter(person),inTotal:incoming.reduce((s,l)=>s+Number(l.amount||0),0),outTotal:outgoing.reduce((s,l)=>s+Number(l.amount||0),0)};
+    }
+    const pending=q.status==='pending',parts=[];
+    if(q.income)parts.push((pending?'entradas previstas':'entradas recebidas')+' de '+DB.rawMoney(r.inTotal));
+    if(q.expense)parts.push((pending?'pagamentos previstos':'saídas pagas')+' de '+DB.rawMoney(r.outTotal));
+    // Voz e tela usam o mesmo resultado calculado, inclusive quando o total é zero.
+    const message='Jhony, em '+DB.monthLabel(q.month)+(q.person?', de Alessandra':'')+', o total é '+parts.join(' e ')+'. Os detalhes estão na tela.';
+    DB.say(message);
+    const originalData=DB.financialData;
+    let html;
+    try{DB.financialData=()=>r;html=DB.financialResults(true)}finally{DB.financialData=originalData}
+    const box=document.getElementById('didiBody');
+    if(box){box.insertAdjacentHTML('beforeend',html);box.scrollTop=box.scrollHeight}
+    if(q.person){const content=document.getElementById('content');if(content)content.innerHTML=html}
+  };
+  DB.handle=async function(text){
+    const t=norm(text);
+    if(/^(?:(?:didi|dione)\s+)?(?:cancelar|cancele|parar|pare|chega|encerrar|tchau)$/.test(t))return previous(text);
+    const q=DB.monthlyQuery(text);
+    if(q){
+      // Uma consulta completa substitui apenas consultas mensais em andamento.
+      if(DB.flow&&!['monthly-query-month','income-month','payment-month','financial-both-month','consulta-mes-isolada'].includes(DB.flow.stage))return previous(text);
+      if(!q.month){DB.flow={stage:'monthly-query-month',query:q};DB.say('De qual mês, Jhony? Se não disser o ano, vou usar o ano atual.');return true}
+      DB.showMonthlyQuery(q);return true;
+    }
+    if(DB.flow?.stage==='monthly-query-month'){
+      const month=DB.queryMonth(text);
+      if(month){DB.showMonthlyQuery({...DB.flow.query,month});return true}
+      DB.flow=null;return previous(text);
+    }
+    return previous(text);
+  };
+})();
+
+</script>
 </body>
 </html>
 
