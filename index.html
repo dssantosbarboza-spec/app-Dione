@@ -1406,7 +1406,7 @@ DB.chooseCity=i=>{const loc=DB.locations[i];closeSheet();return DB.weatherUpdate
 DB.locate=function(){if(!navigator.geolocation)return toast('Localização não disponível');navigator.geolocation.getCurrentPosition(p=>DB.weatherUpdate('',{latitude:p.coords.latitude,longitude:p.coords.longitude,name:'Minha localização'}),()=>toast('Localização não autorizada. Digite sua cidade.'))};
 DB.weatherHTML=function(){const w=DB.weather;return `<div class="card"><h3>Tempo do dia e da semana</h3><form class="db-actions" onsubmit="event.preventDefault();DB.weatherUpdate(this.elements.city.value)"><input name="city" aria-label="Cidade" class="f" placeholder="Digite a cidade" required><button class="btn">Buscar</button><button type="button" class="btn outline" onclick="DB.locate()">Minha localização</button></form>${w?`<h2>${DB.esc(w.place)} · ${Math.round(w.current.temperature_2m)}°C</h2><p>${DB.weatherCode(w.current.weather_code)}</p><div class="db-week">${w.daily.time.map((d,i)=>`<div class="db-day">${new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric'})}<strong>${Math.round(w.daily.temperature_2m_max[i])}° / ${Math.round(w.daily.temperature_2m_min[i])}°</strong>${DB.weatherCode(w.daily.weather_code[i])}<br>Chuva: ${w.daily.precipitation_probability_max[i]??'—'}%</div>`).join('')}</div><p class="muted">Open-Meteo · consulta ${new Date(w.at).toLocaleString('pt-BR')} · fuso ${DB.esc(w.timezone)}. Dados salvos; atualize para obter nova previsão.</p>`:'<p>Escolha uma cidade para ver os próximos sete dias.</p>'}</div>`};
 DB.trips=function(){const extra=state.viagem?(Array.isArray(state.viagem)?state.viagem:[state.viagem]):[];return [...extra,...state.dbTrips]};
-DB.tripsHTML=function(){return `<div class="db-trip"><h2>Viagens</h2><p>Destinos, reservas e roteiro em um só lugar.</p><button class="btn" onclick="DB.tripForm()">+ Viagem</button></div>${DB.fxHTML()}${DB.trips().map((t,i)=>`<div class="card"><h3>${DB.esc(t.destination||t.destino||t.title||t.nome||'Viagem')}</h3><p>${DB.esc(t.start||t.inicio||t.dataInicio||'')} a ${DB.esc(t.end||t.fim||t.dataFim||'')}</p><p>Hotel: ${DB.esc(t.hotel||'Não informado')}</p><div style="white-space:pre-wrap">${DB.esc(typeof(t.itinerary||t.roteiro)==='string'?(t.itinerary||t.roteiro):JSON.stringify(t.itinerary||t.roteiro||'',null,2))}</div><div class="db-actions"><button class="btn outline" onclick="DB.tripMap(${i})">Abrir mapa</button>${state.dbTrips.includes(t)?`<button class="btn outline" onclick="DB.tripForm('${encodeURIComponent(t.id)}')">Editar</button>`:''}</div></div>`).join('')||'<div class="card">Nenhuma viagem cadastrada.</div>'}`};
+DB.tripsHTML=function(){return `<div class="db-trip"><h2>Viagens</h2><p>Destinos, reservas e roteiro em um só lugar.</p><button class="btn" onclick="DB.tripForm()">+ Viagem</button></div>${DB.fxHTML()}${DB.trips().map((t,i)=>`<div class="card"><h3>${DB.esc(t.destination||t.destino||t.title||t.nome||'Viagem')}</h3><p>${DB.esc(t.start||t.inicio||t.dataInicio||'')} a ${DB.esc(t.end||t.fim||t.dataFim||'')}</p><p>Hotel: ${DB.esc(t.hotel||'Não informado')}</p><div style="white-space:pre-wrap">${DB.esc(typeof(t.itinerary||t.roteiro)==='string'?(t.itinerary||t.roteiro):JSON.stringify(t.itinerary||t.roteiro||'',null,2))}</div><div class="db-actions"><button class="btn outline" onclick="DB.tripMap(${i})">Abrir mapa</button><button class="btn outline" onclick="DB.deleteTrip(${i})">Excluir viagem</button>${state.dbTrips.includes(t)?`<button class="btn outline" onclick="DB.tripForm('${encodeURIComponent(t.id)}')">Editar</button>`:''}</div></div>`).join('')||'<div class="card">Nenhuma viagem cadastrada.</div>'}`};
 DB.tripMap=i=>{const t=DB.trips()[i],q=t.destination||t.destino||t.title;if(!q)return toast('Cadastre o destino');window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener')};
 DB.tripForm=function(id){const t=state.dbTrips.find(x=>x.id===decodeURIComponent(id||''))||{};DB.tripEditing=t.id;openSheet('Viagem',`<form onsubmit="DB.saveTrip(event)"><label>Destino<input class="db-field" id="tr-dest" required value="${DB.esc(t.destination)}"></label><label>Ida<input class="db-field" type="date" id="tr-start" required value="${DB.esc(t.start)}"></label><label>Volta<input class="db-field" type="date" id="tr-end" required value="${DB.esc(t.end)}"></label><label>Hotel<input class="db-field" id="tr-hotel" value="${DB.esc(t.hotel)}"></label><label>Roteiro por dia / reservas<textarea class="db-field" rows="8" id="tr-plan">${DB.esc(t.itinerary)}</textarea></label><button class="btn block">Salvar</button></form>`)};
 DB.saveTrip=function(e){e.preventDefault();const start=document.getElementById('tr-start').value,end=document.getElementById('tr-end').value;if(end<start)return toast('Volta anterior à ida');snapshot();const t={id:DB.tripEditing||uid('trip'),destination:document.getElementById('tr-dest').value,start,end,hotel:document.getElementById('tr-hotel').value,itinerary:document.getElementById('tr-plan').value};const old=state.dbTrips.find(x=>x.id===t.id);if(old)Object.assign(old,t);else state.dbTrips.push(t);save();closeSheet();render()};
@@ -2105,6 +2105,45 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
       DB.flow=null;return previous(text);
     }
     return previous(text);
+  };
+})();
+
+/* Ajustes limitados: leitura do tempo e exclusão de viagens. */
+(function(){
+  DB.deleteTrip=function(index){
+    const trip=DB.trips()[index];if(!trip)return;
+    const name=trip.destination||trip.destino||trip.title||trip.nome||'Viagem';
+    if(!confirm('Excluir a viagem “'+name+'”?'))return;
+    snapshot();
+    const own=state.dbTrips.indexOf(trip);
+    if(own>=0)state.dbTrips.splice(own,1);
+    else if(Array.isArray(state.viagem)){const i=state.viagem.indexOf(trip);if(i>=0)state.viagem.splice(i,1)}
+    else if(state.viagem===trip)state.viagem=null;
+    save();render();toast('Viagem excluída.');
+  };
+  const originalWeatherHTML=DB.weatherHTML;
+  DB.weatherHTML=function(){return originalWeatherHTML()+`<div class="db-actions"><button class="btn outline" type="button" id="db-weather-pause" onclick="DB.toggleWeatherSpeech()">${DB.weatherPaused?'Continuar leitura':'Pausar leitura'}</button></div>`};
+  DB.weatherReading=false;DB.weatherPaused=false;
+  DB.toggleWeatherSpeech=function(){
+    const synth=window.speechSynthesis;if(!synth)return;
+    if(!DB.weatherReading||!synth.speaking)return toast('Nenhuma previsão está sendo lida.');
+    if(DB.weatherPaused){synth.resume();DB.weatherPaused=false}else{synth.pause();DB.weatherPaused=true}
+    const b=document.getElementById('db-weather-pause');if(b)b.textContent=DB.weatherPaused?'Continuar leitura':'Pausar leitura';
+  };
+  const originalSay=DB.say;
+  DB.say=function(message){
+    const weather=!!DB.weather&&message===DB.weatherSpeech();
+    // Uma consulta que terminou após sair da tela não deve iniciar áudio.
+    if(weather&&currentTab!=='tempo')return;
+    DB.weatherReading=weather;DB.weatherPaused=false;
+    const result=originalSay(message);
+    const b=document.getElementById('db-weather-pause');if(b)b.textContent='Pausar leitura';
+    return result;
+  };
+  const originalStop=DB.stopVoice;
+  DB.stopVoice=function(){
+    originalStop();
+    if(DB.weatherReading){window.speechSynthesis?.cancel();DB.speaking=false;DB.weatherReading=false;DB.weatherPaused=false}
   };
 })();
 
