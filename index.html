@@ -1408,7 +1408,7 @@ DB.chooseCity=i=>{const loc=DB.locations[i];closeSheet();return DB.weatherUpdate
 DB.locate=function(){if(!navigator.geolocation)return toast('Localização não disponível');navigator.geolocation.getCurrentPosition(p=>DB.weatherUpdate('',{latitude:p.coords.latitude,longitude:p.coords.longitude,name:'Minha localização'}),()=>toast('Localização não autorizada. Digite sua cidade.'))};
 DB.weatherHTML=function(){const w=DB.weather;return `<div class="card"><h3>Tempo do dia e da semana</h3><form class="db-actions" onsubmit="event.preventDefault();DB.weatherUpdate(this.elements.city.value)"><input name="city" aria-label="Cidade" class="f" placeholder="Digite a cidade" required><button class="btn">Buscar</button><button type="button" class="btn outline" onclick="DB.locate()">Minha localização</button></form>${w?`<h2>${DB.esc(w.place)} · ${Math.round(w.current.temperature_2m)}°C</h2><p>${DB.weatherCode(w.current.weather_code)}</p><div class="db-week">${w.daily.time.map((d,i)=>`<div class="db-day">${new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'numeric'})}<strong>${Math.round(w.daily.temperature_2m_max[i])}° / ${Math.round(w.daily.temperature_2m_min[i])}°</strong>${DB.weatherCode(w.daily.weather_code[i])}<br>Chuva: ${w.daily.precipitation_probability_max[i]??'—'}%</div>`).join('')}</div><p class="muted">Open-Meteo · consulta ${new Date(w.at).toLocaleString('pt-BR')} · fuso ${DB.esc(w.timezone)}. Dados salvos; atualize para obter nova previsão.</p>`:'<p>Escolha uma cidade para ver os próximos sete dias.</p>'}</div>`};
 DB.trips=function(){const extra=state.viagem?(Array.isArray(state.viagem)?state.viagem:[state.viagem]):[];return [...extra,...state.dbTrips]};
-DB.tripsHTML=function(){return `<div class="db-trip"><h2>Viagens</h2><p>Destinos, reservas e roteiro em um só lugar.</p><button class="btn" onclick="DB.tripForm()">+ Viagem</button></div>${DB.fxHTML()}${DB.trips().map((t,i)=>`<div class="card"><h3>${DB.esc(t.destination||t.destino||t.title||t.nome||'Viagem')}</h3><p>${DB.esc(t.start||t.inicio||t.dataInicio||'')} a ${DB.esc(t.end||t.fim||t.dataFim||'')}</p><p>Hotel: ${DB.esc(t.hotel||'Não informado')}</p><div style="white-space:pre-wrap">${DB.esc(typeof(t.itinerary||t.roteiro)==='string'?(t.itinerary||t.roteiro):JSON.stringify(t.itinerary||t.roteiro||'',null,2))}</div><div class="db-actions"><button class="btn outline" onclick="DB.tripMap(${i})">Abrir mapa</button>${state.dbTrips.includes(t)?`<button class="btn outline" onclick="DB.tripForm('${encodeURIComponent(t.id)}')">Editar</button>`:''}<button class="btn outline" style="color:var(--red);border-color:var(--red)" onclick="DB.deleteTrip(${i})">Excluir</button></div></div>`).join('')||'<div class="card">Nenhuma viagem cadastrada.</div>'}`};
+DB.tripsHTML=function(){const fd=s=>{const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:String(s||'')};return `<div class="db-trip"><h2>Viagens</h2><p>Destinos, reservas e roteiro em um só lugar.</p><button class="btn" onclick="DB.tripForm()">+ Viagem</button></div>${DB.fxHTML()}${DB.trips().map((t,i)=>{const ini=fd(t.start||t.inicio||t.dataInicio),fim=fd(t.end||t.fim||t.dataFim),periodo=ini&&fim?`${ini} a ${fim}`:(ini||fim||''),rot=t.itinerary||t.roteiro,rotTxt=typeof rot==='string'?rot.trim():(rot&&(Array.isArray(rot)?rot.length:Object.keys(rot).length)?JSON.stringify(rot,null,2):'');return `<div class="card"><h3>${DB.esc(t.destination||t.destino||t.title||t.nome||'Viagem')}</h3>${periodo?`<p>${DB.esc(periodo)}</p>`:''}${t.hotel?`<p>Hotel: ${DB.esc(t.hotel)}</p>`:''}${rotTxt?`<div style="white-space:pre-wrap">${DB.esc(rotTxt)}</div>`:''}<div class="db-actions"><button class="btn outline" onclick="DB.tripMap(${i})">Abrir mapa</button>${state.dbTrips.includes(t)?`<button class="btn outline" onclick="DB.tripForm('${encodeURIComponent(t.id)}')">Editar</button>`:''}<button class="btn outline" style="color:var(--red);border-color:var(--red)" onclick="DB.deleteTrip(${i})">Excluir</button></div></div>`}).join('')||'<div class="card">Nenhuma viagem cadastrada.</div>'}`};
 DB.tripMap=i=>{const t=DB.trips()[i],q=t.destination||t.destino||t.title;if(!q)return toast('Cadastre o destino');window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener')};
 DB.deleteTrip=function(i){
   const t=DB.trips()[i]; if(!t) return;
@@ -2153,6 +2153,33 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
       speechSynthesis.cancel(); DB.speaking = false; clearTimeout(DB.listenTimer);
     }
     return goAntes(id);
+  };
+})();
+</script>
+<script>
+/* Busca por nome na tela de Previsão / Entradas e saídas (filtros unificados) */
+(function(){
+  if(!window.DB) return;
+  const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  const baseEmpty = DB.emptyFinancialSelection;
+  DB.emptyFinancialSelection = function(){ return Object.assign({}, baseEmpty.apply(this, arguments), {name:''}); };
+  if(DB.financialSelection && DB.financialSelection.name===undefined) DB.financialSelection.name = '';
+  const baseData = DB.financialData;
+  DB.financialData = function(){
+    const r = baseData.apply(this, arguments);
+    const nm = norm((DB.financialSelection||{}).name);
+    if(!r || !nm) return r;
+    const keep = l => norm((l.desc||'')+' '+(l.category||'')).includes(nm);
+    const incoming = r.incoming.filter(keep), outgoing = r.outgoing.filter(keep);
+    const sum = a => a.reduce((s,l)=>s+Number(l.amount||0),0);
+    return {incoming, outgoing, items:[...incoming,...outgoing].sort((a,b)=>String(a.date).localeCompare(String(b.date))), inTotal:sum(incoming), outTotal:sum(outgoing)};
+  };
+  const baseHtml = DB.financialHTML;
+  DB.financialHTML = function(){
+    const h = baseHtml.apply(this, arguments);
+    const f = DB.financialSelection || {};
+    const campo = '<label for="db-financial-name">Nome</label><input class="db-field" id="db-financial-name" type="search" placeholder="Buscar pelo nome (ex.: celular, mercado)" value="'+DB.esc(f.name||'')+'" onkeydown="if(event.key===\'Enter\'){DB.financialSelection.name=this.value;render()}" onchange="DB.financialSelection.name=this.value;render()">';
+    return h.replace('<label for="db-financial-status">', campo + '<label for="db-financial-status">');
   };
 })();
 </script>
