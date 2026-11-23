@@ -495,7 +495,7 @@ function renderSituacao(){
     <h3>Saldo disponível <span>✦</span></h3>
     <div class="big db-home-value"><span class="db-money">${fmt(saldo)}</span></div>
     <div class="muted">${DB.monthLabel(ym)}</div>
-  </div><div class="card db-home-bills db-bills-${billsSummary.tone}"><h3>Contas a vencer</h3><div class="big">${fmt(billsSummary.total)}</div><div class="muted">${DB.monthLabel(ym)}</div></div></div>
+  </div><div class="card db-home-bills db-bills-${billsSummary.tone}" role="button" tabindex="0" style="cursor:pointer" onclick="DB.openBillsList()" onkeydown="if(event.key==='Enter')DB.openBillsList()"><h3>Contas a vencer</h3><div class="big">${fmt(billsSummary.total)}</div><div class="muted">${DB.monthLabel(ym)} · toque para ver a relação</div></div></div>
   <div class="grid2 db-home-totals">
     <div class="card"><h3>↙ Entradas do mês</h3><div class="big" style="font-size:19px;color:var(--green)">${fmt(recebidoMes)}</div></div>
     <div class="card"><h3>↗ Saídas do mês</h3><div class="big" style="font-size:19px;color:var(--red)">${fmt(pagoMes)}</div></div>
@@ -2180,6 +2180,28 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
     const f = DB.financialSelection || {};
     const campo = '<label for="db-financial-name">Nome</label><input class="db-field" id="db-financial-name" type="search" placeholder="Buscar pelo nome (ex.: celular, mercado)" value="'+DB.esc(f.name||'')+'" onkeydown="if(event.key===\'Enter\'){DB.financialSelection.name=this.value;render()}" onchange="DB.financialSelection.name=this.value;render()">';
     return h.replace('<label for="db-financial-status">', campo + '<label for="db-financial-status">');
+  };
+})();
+</script>
+<script>
+/* Toque em "Contas a vencer" (tela inicial) abre a relação das contas que formam o valor */
+(function(){
+  if(!window.DB) return;
+  DB.openBillsList = function(){
+    const hoje = todayStr(), ym = hoje.slice(0,7);
+    const itens = allPendingCommitments()
+      .filter(l => l.type!=='entrada' && !l.noDate && String(l.date).slice(0,7)===ym)
+      .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const total = Math.round(itens.reduce((s,l)=>s+Math.max(0,Number(l.amount)||0),0)*100)/100;
+    const oculto = !!DB.hidden, din = v => oculto ? '••••••' : DB.rawMoney(v);
+    const rotulo = l => l.date<hoje ? 'Atrasada · venceu em '+fmtDate(l.date) : (l.date===hoje ? 'Vence hoje' : 'Vence em '+fmtDate(l.date));
+    const lista = itens.length
+      ? '<ul class="db-pay-list" style="max-height:50vh">'+itens.map(l=>'<li><div><span class="db-pay-title">'+DB.esc(l.desc||'Conta')+'</span><small>'+DB.esc(rotulo(l))+(l.category?' · '+DB.esc(l.category):'')+'</small></div><span class="db-pay-amount">'+DB.esc(din(l.amount))+'</span></li>').join('')+'</ul>'
+      : '<p class="muted">Nenhuma conta a vencer neste mês.</p>';
+    openSheet('Contas a vencer — '+DB.monthLabel(ym),
+      '<div class="row"><span><b>Total</b> · '+itens.length+(itens.length===1?' conta':' contas')+'</span><b>'+DB.esc(din(total))+'</b></div>'
+      + (oculto ? '<p class="muted" style="font-size:12px;margin:6px 0 0">Valores ocultos. Use “Mostrar valores” na tela inicial para vê-los.</p>' : '')
+      + lista + '<button class="btn block" style="margin-top:16px" onclick="closeSheet()">Fechar</button>');
   };
 })();
 </script>
