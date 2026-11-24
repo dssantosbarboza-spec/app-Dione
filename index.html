@@ -140,6 +140,7 @@ body:not(.db-dark){--bg:#f7f6f1;--ink:#163f3c;--teal:#185b4e;--teal-dark:#174c40
   <div class="lockCard">
     <div class="lockLogo">D</div>
     <h1 id="lockTitle">App Pessoal Dione</h1>
+    <div id="lockVersion" style="font-size:11px;opacity:.7;margin-top:2px"></div>
     <p id="lockSub">Digite sua senha para entrar</p>
     <div class="lockErr" id="lockErr"></div>
     <input type="password" id="lockInput" inputmode="numeric" maxlength="12" placeholder="••••">
@@ -497,8 +498,8 @@ function renderSituacao(){
     <div class="muted">${DB.monthLabel(ym)}</div>
   </div><div class="card db-home-bills db-bills-${billsSummary.tone}" role="button" tabindex="0" style="cursor:pointer" onclick="DB.openBillsList()" onkeydown="if(event.key==='Enter')DB.openBillsList()"><h3>Contas a vencer</h3><div class="big">${fmt(billsSummary.total)}</div><div class="muted">${DB.monthLabel(ym)} · toque para ver a relação</div></div></div>
   <div class="grid2 db-home-totals">
-    <div class="card"><h3>↙ Entradas do mês</h3><div class="big" style="font-size:19px;color:var(--green)">${fmt(recebidoMes)}</div></div>
-    <div class="card"><h3>↗ Saídas do mês</h3><div class="big" style="font-size:19px;color:var(--red)">${fmt(pagoMes)}</div></div>
+    <div class="card" role="button" tabindex="0" style="cursor:pointer" onclick="DB.openMonthList('entrada')" onkeydown="if(event.key==='Enter')DB.openMonthList('entrada')"><h3>↙ Entradas do mês</h3><div class="big" style="font-size:19px;color:var(--green)">${fmt(recebidoMes)}</div><div class="muted" style="font-size:11px;margin-top:4px">toque para ver a relação</div></div>
+    <div class="card" role="button" tabindex="0" style="cursor:pointer" onclick="DB.openMonthList('saida')" onkeydown="if(event.key==='Enter')DB.openMonthList('saida')"><h3>↗ Saídas do mês</h3><div class="big" style="font-size:19px;color:var(--red)">${fmt(pagoMes)}</div><div class="muted" style="font-size:11px;margin-top:4px">toque para ver a relação</div></div>
   </div>
   <div class="db-shortcuts db-home-shortcuts"><button onclick="openLancForm()">＋<span>Novo lançamento</span></button><button onclick="goTab('historico')">↶<span>Histórico</span></button><button onclick="goTab('cartoes')">▣<span>Cartões</span></button><button onclick="goTab('agenda')">▦<span>Agenda</span></button><button onclick="goTab('viagens')">✈<span>Viagens</span></button><button onclick="goTab('previsao')">▦<span>Pagamentos</span></button></div>
   <button class="db-home-talk" onclick="DB.openVoice(true)"><span class="db-home-mic">🤖</span><span><b>Fale com a DIdI</b><small>Seu assistente financeiro e pessoal</small></span></button>
@@ -1521,7 +1522,7 @@ runAutoLancamentos=function(){};runAutoDebts=function(){};
 fmt=originalFmt;
 DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
 const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
-DB.currentVersion='05-NOV-INICIO-CONTAS-3';
+DB.currentVersion='23-NOV-LISTAS-BACKUP-1';
 DB.storageReady=DBStore.init();
 save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
 const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
@@ -2202,6 +2203,116 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
       '<div class="row"><span><b>Total</b> · '+itens.length+(itens.length===1?' conta':' contas')+'</span><b>'+DB.esc(din(total))+'</b></div>'
       + (oculto ? '<p class="muted" style="font-size:12px;margin:6px 0 0">Valores ocultos. Use “Mostrar valores” na tela inicial para vê-los.</p>' : '')
       + lista + '<button class="btn block" style="margin-top:16px" onclick="closeSheet()">Fechar</button>');
+  };
+})();
+</script>
+<script>
+/* ===== Listas do mês, último backup, versão visível e ajustes do fluxo de contatos ===== */
+(function(){
+  if(!window.DB) return;
+  const KEY = 'dioneLastBackupAt';
+
+  /* --- 1) relação de Entradas / Saídas do mês (mesma regra do total do cartão) --- */
+  DB.openMonthList = function(tipo){
+    const ym = todayStr().slice(0,7);
+    const valor = l => (tipo==='entrada' && l._creditedAmount!=null) ? Number(l._creditedAmount) : Number(l.amount||0);
+    const itens = activeLanc().filter(l=>l.applied && l.type===tipo && l.date && l.date.slice(0,7)===ym)
+      .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    const total = Math.round(itens.reduce((s,l)=>s+valor(l),0)*100)/100;
+    const oculto = !!DB.hidden, din = v => oculto ? '••••••' : DB.rawMoney(v);
+    const nome = tipo==='entrada' ? 'Entradas' : 'Saídas';
+    const lista = itens.length
+      ? '<ul class="db-pay-list" style="max-height:50vh">'+itens.map(l=>{
+          const dif = (tipo==='entrada' && l._creditedAmount!=null && Math.abs(Number(l.amount)-Number(l._creditedAmount))>0.004)
+            ? ' · valor cheio '+din(l.amount) : '';
+          return '<li><div><span class="db-pay-title">'+DB.esc(l.desc||'Lançamento')+'</span><small>'+DB.esc(fmtDate(l.date))+(l.category?' · '+DB.esc(l.category):'')+DB.esc(dif)+'</small></div><span class="db-pay-amount">'+DB.esc(din(valor(l)))+'</span></li>';
+        }).join('')+'</ul>'
+      : '<p class="muted">Nenhum lançamento realizado neste mês.</p>';
+    openSheet(nome+' do mês — '+DB.monthLabel(ym),
+      '<div class="row"><span><b>Total</b> · '+itens.length+(itens.length===1?' lançamento':' lançamentos')+'</span><b>'+DB.esc(din(total))+'</b></div>'
+      + (oculto ? '<p class="muted" style="font-size:12px;margin:6px 0 0">Valores ocultos. Use “Mostrar valores” na tela inicial para vê-los.</p>' : '')
+      + lista + '<button class="btn block" style="margin-top:16px" onclick="closeSheet()">Fechar</button>');
+  };
+
+  /* --- 2) último backup --- */
+  DB.markBackup = function(){ try{ localStorage.setItem(KEY, new Date().toISOString()); }catch(e){} };
+  const exportAntes = exportBackup;
+  exportBackup = function(){ const r = exportAntes.apply(this, arguments); DB.markBackup(); return r; };
+  DB.shareBackup = async function(){
+    try{
+      const file = new File([JSON.stringify(state,null,2)],'db-backup.json',{type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:'Backup DB'}); DB.markBackup(); }
+      else exportBackup();
+    }catch(e){ if(e.name!=='AbortError') toast('Não foi possível compartilhar. Use Exportar backup.'); }
+  };
+  DB.backupInfo = function(){
+    let iso=null; try{ iso=localStorage.getItem(KEY); }catch(e){}
+    if(!iso) return {texto:'Nenhum backup registrado ainda (os feitos antes desta versão não aparecem aqui).', alerta:true};
+    const dt=new Date(iso), dias=Math.floor((Date.now()-dt)/86400000);
+    const quando=dt.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const rel = dias<=0 ? 'hoje' : (dias===1 ? 'ontem' : 'há '+dias+' dias');
+    return {texto:'Último backup: '+quando+' ('+rel+')'+(dias>=7?' — faça um novo backup.':''), alerta:dias>=7};
+  };
+  const st = document.createElement('style');
+  st.textContent = '.db-backup-status{margin:10px 12px 0;padding:10px 12px;border-radius:12px;background:rgba(31,111,91,.14);font-size:12.5px;line-height:1.45}'
+    + '.db-backup-status.warn{background:rgba(217,83,79,.22)}.db-backup-status b{display:block;margin-bottom:2px}'
+    + '.db-backup-status button{margin-top:8px;width:100%;background:#1f6f5b;color:#fff;border:none;border-radius:10px;padding:11px;font-weight:700;font-size:13px}';
+  document.head.appendChild(st);
+  const menuAntes = DB.menuActions;
+  DB.menuActions = function(){
+    menuAntes.apply(this, arguments);
+    const foot = document.querySelector('.drawerHead'); if(!foot) return;
+    const old = document.getElementById('db-backup-status'); if(old) old.remove();
+    const i = DB.backupInfo();
+    foot.insertAdjacentHTML('afterend','<div id="db-backup-status" class="db-backup-status'+(i.alerta?' warn':'')+'"><b>'+(i.alerta?'⚠ ':'✓ ')+'Backup</b>'+DB.esc(i.texto)
+      + (i.alerta?'<button class="drawerAction" onclick="exportBackup()">Fazer backup agora</button>':'')+'</div>');
+  };
+  const saudeAntes = DB.healthHTML;
+  DB.healthHTML = function(){ return saudeAntes.apply(this, arguments).replace('<p>Versão ', '<p>'+DB.esc(DB.backupInfo().texto)+'</p><p>Versão '); };
+
+  /* --- 4) versão visível (tela de entrada e menu) --- */
+  const lv = document.getElementById('lockVersion'); if(lv) lv.textContent = 'versão ' + DB.currentVersion;
+  const dh = document.querySelector('.drawerHead'); if(dh) dh.insertAdjacentHTML('beforeend','<small style="display:block;opacity:.7;font-size:11px;margin-top:2px">versão '+DB.esc(DB.currentVersion)+'</small>');
+
+  /* --- 5) contatos: respostas mais naturais por voz --- */
+  const handleAntes = DB.handle;
+  const NUM = {um:0,uma:0,primeiro:0,primeira:0,dois:1,duas:1,segundo:1,segunda:1,tres:2,terceiro:2,terceira:2,quatro:3,quarto:3,quarta:3,cinco:4,quinto:4,quinta:4};
+  DB.pickMethod = function(t){
+    if(/video|videochamada/.test(t)) return 'video';
+    if(/whatsapp|whats app|zap|mensagem|conversa|texto/.test(t)) return 'whatsapp';
+    if(/normal|convencional|ligac|ligar|chamada|telefone|celular|discador|voz/.test(t)) return 'normal';
+    return null;
+  };
+  DB.pickContactChoice = function(t, contatos){
+    const limpo = t.replace(/\b(o|a|os|as|opcao|numero|no|na|da|do|de|esse|essa)\b/g,' ').replace(/\s+/g,' ').trim();
+    let idx;
+    if(/^\d+$/.test(limpo)) idx = Number(limpo)-1; else if(limpo in NUM) idx = NUM[limpo]; else if(/^ultim[oa]$/.test(limpo)) idx = contatos.length-1;
+    if(idx!==undefined && contatos[idx]) return contatos[idx];
+    for(const s of [t, limpo]){
+      const m = contatos.filter(c=>{ const n=DB.norm(c.name||c.nome||''); return s && (n===s || n.includes(s) || s.includes(n)); });
+      if(m.length===1) return m[0];
+    }
+    const fim = (t.match(/\d{3,4}/)||[])[0];
+    if(fim){ const m = contatos.filter(c=>String(c.phone||c.telefone||c.tel||'').replace(/\D/g,'').endsWith(fim)); if(m.length===1) return m[0]; }
+    return null;
+  };
+  DB.handle = async function(text){
+    const t = DB.norm(text).replace(/^didi\s*/,'').trim();
+    if(/^(?:cancelar|cancele|parar|pare|chega|encerrar|tchau|deixa|esquece)/.test(t)) return handleAntes.apply(this, arguments);
+    if(DB.flow && DB.flow.stage==='call-contact-choice'){
+      const f = DB.flow, c = DB.pickContactChoice(t, f.contacts);
+      if(!c){ DB.say('Não entendi qual. Diga o número da opção, como segundo, ou o nome completo.'); return true; }
+      DB.flow = {stage:'method', contact:c};
+      if(f.method) DB.launchContact(f.method);
+      else { DB.say('Ligação normal, WhatsApp ou vídeo no WhatsApp?'); DB.contactOptions(); }
+      return true;
+    }
+    if(DB.flow && DB.flow.stage==='method'){
+      const m = DB.pickMethod(t);
+      if(m){ DB.launchContact(m); return true; }
+      DB.say('Não entendi. Ligação normal, WhatsApp ou vídeo no WhatsApp?'); return true;
+    }
+    return handleAntes.apply(this, arguments);
   };
 })();
 </script>
