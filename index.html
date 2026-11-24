@@ -1522,7 +1522,7 @@ runAutoLancamentos=function(){};runAutoDebts=function(){};
 fmt=originalFmt;
 DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
 const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
-DB.currentVersion='23-NOV-LISTAS-BACKUP-1';
+DB.currentVersion='24-NOV-WHATSAPP-VOLTA-1';
 DB.storageReady=DBStore.init();
 save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
 const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
@@ -2197,7 +2197,7 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
     const oculto = !!DB.hidden, din = v => oculto ? '••••••' : DB.rawMoney(v);
     const rotulo = l => l.date<hoje ? 'Atrasada · venceu em '+fmtDate(l.date) : (l.date===hoje ? 'Vence hoje' : 'Vence em '+fmtDate(l.date));
     const lista = itens.length
-      ? '<ul class="db-pay-list" style="max-height:50vh">'+itens.map(l=>'<li><div><span class="db-pay-title">'+DB.esc(l.desc||'Conta')+'</span><small>'+DB.esc(rotulo(l))+(l.category?' · '+DB.esc(l.category):'')+'</small></div><span class="db-pay-amount">'+DB.esc(din(l.amount))+'</span></li>').join('')+'</ul>'
+      ? '<ul class="db-pay-list" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+itens.map(l=>'<li><div><span class="db-pay-title">'+DB.esc(l.desc||'Conta')+'</span><small>'+DB.esc(rotulo(l))+(l.category?' · '+DB.esc(l.category):'')+'</small></div><span class="db-pay-amount">'+DB.esc(din(l.amount))+'</span></li>').join('')+'</ul>'
       : '<p class="muted">Nenhuma conta a vencer neste mês.</p>';
     openSheet('Contas a vencer — '+DB.monthLabel(ym),
       '<div class="row"><span><b>Total</b> · '+itens.length+(itens.length===1?' conta':' contas')+'</span><b>'+DB.esc(din(total))+'</b></div>'
@@ -2222,7 +2222,7 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
     const oculto = !!DB.hidden, din = v => oculto ? '••••••' : DB.rawMoney(v);
     const nome = tipo==='entrada' ? 'Entradas' : 'Saídas';
     const lista = itens.length
-      ? '<ul class="db-pay-list" style="max-height:50vh">'+itens.map(l=>{
+      ? '<ul class="db-pay-list" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch">'+itens.map(l=>{
           const dif = (tipo==='entrada' && l._creditedAmount!=null && Math.abs(Number(l.amount)-Number(l._creditedAmount))>0.004)
             ? ' · valor cheio '+din(l.amount) : '';
           return '<li><div><span class="db-pay-title">'+DB.esc(l.desc||'Lançamento')+'</span><small>'+DB.esc(fmtDate(l.date))+(l.category?' · '+DB.esc(l.category):'')+DB.esc(dif)+'</small></div><span class="db-pay-amount">'+DB.esc(din(valor(l)))+'</span></li>';
@@ -2314,6 +2314,28 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
     }
     return handleAntes.apply(this, arguments);
   };
+})();
+</script>
+<script>
+/* WhatsApp/discador: abre FORA do app (nova aba/app) sem tirar o Didi da memória; assim o botão Voltar traz de volta, sem pedir senha */
+(function(){
+  if(!window.DB) return;
+  const abrirExterno = function(url){
+    if(/^https?:/i.test(url)){
+      let w = null;
+      try{ w = window.open(url, '_blank', 'noopener'); }catch(e){}
+      if(!w) toast('Toque no botão “Abrir WhatsApp” para continuar.');
+    } else {
+      window.location.href = url; /* tel: abre o discador sem fechar o app */
+    }
+  };
+  DB.openContactURL = abrirExterno;
+  DB.openWhatsAppURL = abrirExterno;
+  /* qualquer link do WhatsApp tocado no app abre em nova aba, nunca na janela do app */
+  document.addEventListener('click', function(e){
+    const a = e.target && e.target.closest ? e.target.closest('a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]') : null;
+    if(a){ a.target = '_blank'; a.rel = 'noopener'; }
+  }, true);
 })();
 </script>
 </body>
