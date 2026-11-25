@@ -235,7 +235,7 @@ function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
 function addMonthsIso(dateStr, n){ const d = new Date(dateStr+"T00:00:00"); d.setMonth(d.getMonth()+n); return localDateStr(d); }
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 function logHist(text){ state.history.unshift({id:uid('h'), ts:new Date().toISOString(), text}); if(state.history.length>500) state.history.pop(); }
-function pushMovement(type, desc, amount){ state.movements.unshift({id:uid('mov'), ts:new Date().toISOString(), type, desc, amount}); if(state.movements.length>400) state.movements.pop(); }
+function pushMovement(type, desc, amount){ state.movements.unshift({id:uid('mov'), ts:new Date().toISOString(), type, desc, amount}); if(state.movements.length>2000) state.movements.pop(); }
 function snapshot(){ state.undoSnapshots.push(JSON.stringify({saldo:state.saldo,lancamentos:state.lancamentos,cards:state.cards,loan:state.loan,debts:state.debts,boxes:state.boxes,movements:state.movements,dbTrips:state.dbTrips,viagem:state.viagem})); if(state.undoSnapshots.length>20) state.undoSnapshots.shift(); }
 function undoLast(){
   if(!state.undoSnapshots.length){ toast("Nada para desfazer"); return; }
@@ -1522,7 +1522,7 @@ runAutoLancamentos=function(){};runAutoDebts=function(){};
 fmt=originalFmt;
 DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
 const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
-DB.currentVersion='24-NOV-WHATSAPP-VOLTA-1';
+DB.currentVersion='25-NOV-CONFERENCIA-1';
 DB.storageReady=DBStore.init();
 save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
 const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
@@ -2336,6 +2336,164 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
     const a = e.target && e.target.closest ? e.target.closest('a[href^="https://wa.me/"], a[href^="https://api.whatsapp.com/"]') : null;
     if(a){ a.target = '_blank'; a.rel = 'noopener'; }
   }, true);
+})();
+</script>
+<script>
+/* ===== Armazenamento protegido, botão Atualizar app e tela Conferência ===== */
+(function(){
+  if(!window.DB) return;
+  const esc = s => DB.esc(String(s==null?'':s));
+  const r2 = n => Math.round(Number(n||0)*100)/100;
+  DB.movementsCap = 2000;
+
+  /* ---- 2) armazenamento protegido ---- */
+  DB.persistOk = null;
+  DB.requestPersist = async function(manual){
+    if(!(navigator.storage && navigator.storage.persist)){ if(manual) toast('Este navegador não oferece proteção de armazenamento.'); return false; }
+    let ok = false;
+    try{ ok = (await navigator.storage.persisted()) || (await navigator.storage.persist()); }catch(e){}
+    DB.persistOk = !!ok;
+    if(manual) toast(ok ? 'Armazenamento protegido ✓' : 'O navegador não concedeu agora. Use o app instalado na tela inicial por alguns dias e tente de novo.');
+    return !!ok;
+  };
+  DB.persistTexto = function(){
+    if(DB.persistOk===true) return '✓ Armazenamento protegido (o Chrome não apaga seus dados sozinho).';
+    if(DB.persistOk===false) return '⚠ Armazenamento não protegido: o Chrome pode apagar os dados se faltar espaço.';
+    return 'Verificando proteção do armazenamento…';
+  };
+
+  /* ---- 3) atualizar app ---- */
+  DB.updateAvailable = null;
+  DB.checkUpdate = async function(){
+    try{
+      const url = new URL('index.html', location.href); url.searchParams.set('_', Date.now());
+      const r = await fetch(url.toString(), {cache:'no-store'});
+      if(!r.ok) return null;
+      const m = (await r.text()).match(/DB\.currentVersion='([^']+)'/);
+      DB.updateAvailable = (m && m[1] !== DB.currentVersion) ? m[1] : null;
+    }catch(e){ DB.updateAvailable = null; }
+    return DB.updateAvailable;
+  };
+  DB.updateApp = async function(){
+    if(!confirm('Atualizar o app agora?\n\nSeus dados NÃO são apagados. Você só vai precisar entrar com a senha de novo.')) return;
+    try{ save(); }catch(e){}
+    try{ if('caches' in window){ const ks = await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+    try{ if(navigator.serviceWorker){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } }catch(e){}
+    location.replace(location.pathname + '?v=' + Date.now());
+  };
+  const menuAntes = DB.menuActions;
+  DB.menuActions = function(){
+    menuAntes.apply(this, arguments);
+    const ref = document.getElementById('db-backup-status') || document.querySelector('.drawerHead'); if(!ref) return;
+    const old = document.getElementById('db-app-status'); if(old) old.remove();
+    const novo = DB.updateAvailable;
+    ref.insertAdjacentHTML('afterend',
+      '<div id="db-app-status" class="db-backup-status'+(novo?' warn':'')+'"><b>'+(novo?'⬆ Nova versão disponível':'Aplicativo')+'</b>'
+      + (novo ? esc('Versão nova: '+novo+' (você está na '+DB.currentVersion+').') : esc('Versão '+DB.currentVersion+'.'))
+      + '<br>'+esc(DB.persistTexto())
+      + '<button class="drawerAction" onclick="DB.updateApp()">'+(novo?'Atualizar agora':'Atualizar app')+'</button>'
+      + (DB.persistOk===false ? '<button class="drawerAction" onclick="DB.requestPersist(true).then(()=>DB.menuActions())">Proteger armazenamento</button>' : '')
+      + '</div>');
+  };
+  const saudeAntes = DB.healthHTML;
+  DB.healthHTML = function(){ return saudeAntes.apply(this, arguments).replace('<p>Versão ', '<p>'+esc(DB.persistTexto())+'</p><p>Versão '); };
+  setTimeout(async function(){
+    await DB.requestPersist(false);
+    const v = await DB.checkUpdate();
+    if(v) toast('Nova versão disponível ('+v+'). Abra o menu e toque em Atualizar agora.');
+  }, 4000);
+
+  /* ---- 4) tela Conferência (só lê; nunca altera dados) ---- */
+  DB.conferenceCheck = function(){
+    const hoje = todayStr(), oculto = !!DB.hidden, din = v => oculto ? '••••••' : DB.rawMoney(v);
+    const todos = state.lancamentos || [], ativos = todos.filter(l=>!l.trashed), lixo = todos.filter(l=>l.trashed);
+    const out = [], add = (status, titulo, detalhe, itens) => out.push({status, titulo, detalhe, itens: itens||[]});
+    const it = l => ({t:(l.desc||'(sem nome)'), s:(l.date?fmtDate(l.date):'sem data')+(l.category?' · '+l.category:''), v:din(l.amount)});
+
+    // 1) saldo x movimentos
+    const mv = state.movements || [];
+    const soma = r2(mv.reduce((s,m)=>s+(m.type==='credito'?1:-1)*Number(m.amount||0),0));
+    if(mv.length >= DB.movementsCap) add('info','Saldo x histórico','O histórico guarda até '+DB.movementsCap+' movimentos e chegou no limite; não dá mais para refazer o saldo desde o começo.');
+    else {
+      const dif = r2(Number(state.saldo||0) - soma);
+      if(Math.abs(dif) < 0.005) add('ok','Saldo confere com o histórico','Saldo '+din(state.saldo)+' = soma dos '+mv.length+' movimentos (créditos − débitos).');
+      else add('warn','Saldo diferente do histórico','Saldo '+din(state.saldo)+' · soma dos '+mv.length+' movimentos '+din(soma)+' · diferença '+din(dif)+'. Pode haver um ajuste feito fora do histórico.');
+    }
+    // 2) situação x baixa
+    const incons = ativos.filter(l => (l.status==='realizado' && !l.applied) || (l.status==='previsto' && l.applied));
+    add(incons.length?'warn':'ok','Situação dos lançamentos', incons.length ? incons.length+' lançamento(s) com situação inconsistente (realizado sem dar baixa, ou previsto já baixado).' : 'Todos os '+ativos.length+' lançamentos têm situação consistente (realizado = baixado).', incons.map(it));
+    // 3) previstos vencidos
+    const venc = ativos.filter(l => !l.applied && l.date && l.date < hoje).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    add(venc.length?'warn':'ok','Previstos já vencidos', venc.length ? venc.length+' previsto(s) com data passada, total '+din(venc.reduce((s,l)=>s+Number(l.amount||0),0))+'. Dê baixa ou ajuste a data.' : 'Nenhum previsto com data vencida.', venc.map(it));
+    // 4) parcelas
+    const G = {}; todos.forEach(l => { if(l.groupId) (G[l.groupId] = G[l.groupId] || []).push(l); });
+    const faltam = [], naLixeira = [], datas = [], numeros = [], valores = [];
+    Object.values(G).forEach(g => {
+      const atv = g.filter(x=>!x.trashed), lx = g.length - atv.length, n = Number(g[0].installments||0);
+      if(!atv.length) return;
+      const nome = atv[0].desc || '(sem nome)';
+      if(atv.length + lx < n) faltam.push({t:nome, s:'só existem '+(atv.length+lx)+' de '+n+' parcelas', v:''});
+      else if(atv.length > n) faltam.push({t:nome, s:'há mais parcelas ('+atv.length+') que o total ('+n+')', v:''});
+      else if(atv.length < n) naLixeira.push({t:nome, s:atv.length+' de '+n+' (as outras estão na lixeira, você excluiu)', v:''});
+      const nums = atv.map(x=>x.installmentNum); if(new Set(nums).size !== nums.length) numeros.push({t:nome, s:'numeração de parcela repetida', v:''});
+      const ord = atv.slice().sort((a,b)=>a.installmentNum-b.installmentNum);
+      for(let i=1;i<ord.length;i++){
+        if(ord[i].installmentNum - ord[i-1].installmentNum !== 1 || !ord[i].date || !ord[i-1].date) continue;
+        const a = new Date(ord[i-1].date+'T00:00:00'), b = new Date(ord[i].date+'T00:00:00');
+        if((b.getFullYear()-a.getFullYear())*12 + b.getMonth()-a.getMonth() !== 1){ datas.push({t:nome, s:'parcela '+ord[i-1].installmentNum+' em '+fmtDate(ord[i-1].date)+' e '+ord[i].installmentNum+' em '+fmtDate(ord[i].date), v:''}); break; }
+      }
+      const vs = new Set(ord.slice(0,-1).map(x=>r2(x.amount))); if(vs.size > 1) valores.push({t:nome, s:'parcelas com valores diferentes (pode ser proposital)', v:''});
+    });
+    add(faltam.length?'warn':'ok','Parcelas faltando', faltam.length ? faltam.length+' compra(s) parcelada(s) com parcelas que sumiram ou sobraram.' : 'Todas as '+Object.keys(G).length+' compras parceladas estão com a quantidade de parcelas certa.', faltam);
+    if(naLixeira.length) add('info','Parcelas na lixeira', naLixeira.length+' compra(s) com parcela(s) que você mandou para a lixeira.', naLixeira);
+    if(numeros.length) add('warn','Numeração de parcelas', numeros.length+' compra(s) com número de parcela repetido.', numeros);
+    add(datas.length?'warn':'ok','Datas das parcelas', datas.length ? datas.length+' compra(s) com datas fora do padrão de 1 em 1 mês.' : 'As datas das parcelas seguem de mês em mês.', datas);
+    if(valores.length) add('info','Valores das parcelas', valores.length+' compra(s) com parcelas de valores diferentes.', valores);
+    // 5) duplicados
+    const D = {}; ativos.forEach(l => { const k = [(l.desc||'').trim().toLowerCase(), r2(l.amount), l.date, l.installmentNum||1].join('|'); (D[k] = D[k] || []).push(l); });
+    const dups = Object.values(D).filter(a=>a.length>1).map(a=>it(a[0]));
+    add(dups.length?'warn':'ok','Possíveis duplicados', dups.length ? dups.length+' grupo(s) com mesmo nome, valor, data e parcela.' : 'Nenhum lançamento repetido (mesmo nome, valor, data e parcela).', dups);
+    // 6) valores e datas estranhos
+    const estr = ativos.filter(l => !(Number(l.amount) > 0) || !l.date || isNaN(new Date(l.date+'T00:00:00')));
+    add(estr.length?'warn':'ok','Valores e datas', estr.length ? estr.length+' lançamento(s) com valor zerado/negativo ou data inválida.' : 'Nenhum valor zerado nem data inválida.', estr.map(it));
+    // 7) faturas de cartão
+    try{
+      if(typeof computeCardDueDate==='function' && typeof cardById==='function'){
+        let n = 0; const dif = [];
+        ativos.filter(l=>l.cardId && l.purchaseDate).forEach(l => {
+          const card = cardById(l.cardId); if(!card || !card.closingDay || !card.dueDay) return;
+          const first = computeCardDueDate(l.purchaseDate, card);
+          const esp = (l.installmentNum||1)===1 ? first : addMonthsIso(first, (l.installmentNum||1)-1);
+          n++; if(esp !== l.date) dif.push({t:l.desc||'(sem nome)', s:'está em '+fmtDate(l.date)+', pela regra do cartão seria '+fmtDate(esp), v:din(l.amount)});
+        });
+        add(dif.length?'warn':'ok','Vencimento das faturas de cartão', dif.length ? dif.length+' de '+n+' lançamentos de cartão com vencimento diferente do calculado (podem ter sido editados à mão).' : 'Os '+n+' lançamentos de cartão estão com o vencimento certo pela regra de fechamento/vencimento.', dif);
+      }
+    }catch(e){}
+    if(lixo.length) add('info','Lixeira', lixo.length+' item(ns) na lixeira (não entram em nenhuma conta).');
+    return out;
+  };
+  DB.conferenceHTML = function(){
+    const r = DB.conferenceCheck(), avisos = r.filter(x=>x.status==='warn').length, ic = {ok:'✅', warn:'⚠️', info:'ℹ️'};
+    return '<div class="card"><h3>Conferência dos números</h3><p>'+(avisos ? '<b>'+avisos+' ponto(s) de atenção</b>' : '<b>Tudo certo ✅</b>')+' · feita agora, só olhando os dados deste aparelho. Nada é alterado.</p><button class="btn" onclick="render()">Conferir de novo</button></div>'
+      + r.map(x => '<div class="card"><h3>'+ic[x.status]+' '+esc(x.titulo)+'</h3><p>'+esc(x.detalhe)+'</p>'
+        + (x.itens.length ? '<details><summary>Ver '+x.itens.length+' item(ns)</summary><ul class="db-pay-list" style="max-height:40vh;overflow-y:auto">'
+          + x.itens.slice(0,40).map(i=>'<li><div><span class="db-pay-title">'+esc(i.t)+'</span><small>'+esc(i.s||'')+'</small></div><span class="db-pay-amount">'+esc(i.v||'')+'</span></li>').join('')
+          + '</ul>'+(x.itens.length>40?'<p class="muted">… e mais '+(x.itens.length-40)+'</p>':'')+'</details>' : '')
+        + '</div>').join('');
+  };
+  if(!NAV.some(n=>n.id==='conferencia')){
+    const k = NAV.findIndex(n=>n.id==='config');
+    NAV.splice(k>=0?k:NAV.length, 0, {id:'conferencia', label:'Conferência', ic:'🧾'});
+  }
+  const renderAntes = render;
+  render = function(){
+    if(currentTab!=='conferencia') return renderAntes.apply(this, arguments);
+    DB.normalize(); buildNav();
+    document.getElementById('headerSub').textContent = 'Conferência';
+    document.getElementById('content').innerHTML = DB.conferenceHTML();
+    document.getElementById('fabBtn').style.display = 'none';
+    DB.privacy(); DB.theme();
+  };
 })();
 </script>
 </body>
