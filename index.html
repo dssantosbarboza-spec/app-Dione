@@ -236,7 +236,7 @@ function addMonthsIso(dateStr, n){ const d = new Date(dateStr+"T00:00:00"); d.se
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 function logHist(text){ state.history.unshift({id:uid('h'), ts:new Date().toISOString(), text}); if(state.history.length>500) state.history.pop(); }
 function pushMovement(type, desc, amount){ state.movements.unshift({id:uid('mov'), ts:new Date().toISOString(), type, desc, amount}); if(state.movements.length>2000) state.movements.pop(); }
-function snapshot(){ state.undoSnapshots.push(JSON.stringify({saldo:state.saldo,lancamentos:state.lancamentos,cards:state.cards,loan:state.loan,debts:state.debts,boxes:state.boxes,movements:state.movements,dbTrips:state.dbTrips,viagem:state.viagem})); if(state.undoSnapshots.length>20) state.undoSnapshots.shift(); }
+function snapshot(){ state.undoSnapshots.push(JSON.stringify({saldo:state.saldo,lancamentos:state.lancamentos,cards:state.cards,loan:state.loan,debts:state.debts,boxes:state.boxes,movements:state.movements,dbTrips:state.dbTrips,viagem:state.viagem,pendingSalaryDeduction:state.pendingSalaryDeduction})); if(state.undoSnapshots.length>20) state.undoSnapshots.shift(); }
 function undoLast(){
   if(!state.undoSnapshots.length){ toast("Nada para desfazer"); return; }
   const s = JSON.parse(state.undoSnapshots.pop());
@@ -321,7 +321,7 @@ function applyLancEffect(l){
     } else if(l.category==='Salário'){
       let amt = Number(l.amount||0);
       let consumed = 0;
-      if(Number(state.pendingSalaryDeduction||0) > 0){
+      if(Number(state.pendingSalaryDeduction||0) > 0 && !l.noVale && !/\b13(?!\d)|d[eé]cimo|f[eé]rias|b[oô]nus|\bplr\b/i.test(l.desc||'')){
         consumed = Math.min(amt, Number(state.pendingSalaryDeduction));
         amt -= consumed;
         state.pendingSalaryDeduction = Number(state.pendingSalaryDeduction) - consumed;
@@ -1522,7 +1522,7 @@ runAutoLancamentos=function(){};runAutoDebts=function(){};
 fmt=originalFmt;
 DB.roundMoney=x=>Math.round((Number(x)||0)*100)/100;
 const dbSavedApply=applyLancEffect;applyLancEffect=function(l){if(l.applied===true)return;dbSavedApply(l);state.saldo=DB.roundMoney(state.saldo)};
-DB.currentVersion='25-NOV-CONFERENCIA-1';
+DB.currentVersion='27-NOV-SALARIO-VALE-2';
 DB.storageReady=DBStore.init();
 save=function(){if(!DBStore.ready)throw Error('Aguarde o carregamento dos dados');DB.normalize();DBStore.persist(state);};
 const dbReadyUnlock=tryUnlock;tryUnlock=function(){if(!DBStore.ready)return toast('Aguarde carregar seus dados');dbReadyUnlock()};
@@ -2493,6 +2493,227 @@ openLancForm=function(...args){const result=old(...args),desc=document.getElemen
     document.getElementById('content').innerHTML = DB.conferenceHTML();
     document.getElementById('fabBtn').style.display = 'none';
     DB.privacy(); DB.theme();
+  };
+})();
+</script>
+<script>
+/* ===== Backup protegido por senha (AES-256-GCM + PBKDF2). O backup comum continua existindo. ===== */
+(function(){
+  if(!window.DB) return;
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  const b64 = buf => { const a = new Uint8Array(buf); let s = ''; for(let i=0;i<a.length;i+=8192) s += String.fromCharCode.apply(null, a.subarray(i,i+8192)); return btoa(s); };
+  const unb64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+  const esc = s => DB.esc(String(s==null?'':s));
+
+  DB.cryptoKey = async function(pass, salt, iter){
+    const base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:iter, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+  };
+  DB.encryptBackupText = async function(text, pass){
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 250000;
+    const key = await DB.cryptoKey(pass, salt, iter);
+    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(text));
+    return JSON.stringify({app:'dione', formato:'backup-protegido-v1', kdf:'PBKDF2-SHA256', iteracoes:iter, salt:b64(salt), iv:b64(iv), dados:b64(ct), criado:new Date().toISOString()});
+  };
+  DB.decryptBackupText = async function(obj, pass){
+    const key = await DB.cryptoKey(pass, unb64(obj.salt), obj.iteracoes);
+    const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64(obj.iv)}, key, unb64(obj.dados));
+    return dec.decode(pt);
+  };
+
+  /* ---- exportar ---- */
+  DB.openProtectedBackup = function(){
+    toggleDrawer(false);
+    openSheet('Backup protegido por senha',
+      '<p>O arquivo fica <b>criptografado</b>: sem a senha ninguém consegue ler seus dados, mesmo que pegue o arquivo.</p>'
+      + '<p class="muted" style="font-size:12.5px"><b>Anote essa senha em lugar seguro.</b> Se você esquecer, não existe como abrir esse backup.</p>'
+      + '<label for="db-bkp-p1">Senha do backup (mínimo 6 caracteres)</label><input class="db-field" id="db-bkp-p1" type="password" autocomplete="off">'
+      + '<label for="db-bkp-p2">Repita a senha</label><input class="db-field" id="db-bkp-p2" type="password" autocomplete="off">'
+      + '<p id="db-bkp-msg" class="muted" style="color:var(--red,#b3261e);min-height:1.2em"></p>'
+      + '<button class="btn block" id="db-bkp-go" onclick="DB.runProtectedBackup()">Gerar backup protegido</button>'
+      + '<div id="db-bkp-share"></div>');
+  };
+  DB.runProtectedBackup = async function(){
+    const p1 = document.getElementById('db-bkp-p1').value, p2 = document.getElementById('db-bkp-p2').value;
+    const msg = document.getElementById('db-bkp-msg'), btn = document.getElementById('db-bkp-go');
+    if(p1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+    if(p1 !== p2){ msg.textContent = 'As duas senhas não são iguais.'; return; }
+    msg.textContent = ''; btn.disabled = true; btn.textContent = 'Gerando… (alguns segundos)';
+    try{
+      const original = JSON.stringify(state, null, 2);
+      const json = await DB.encryptBackupText(original, p1);
+      const volta = await DB.decryptBackupText(JSON.parse(json), p1);          /* confere antes de entregar */
+      if(volta !== original) throw new Error('verificação falhou');
+      const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'), nome = 'dione-backup-protegido-' + stamp + '.json';
+      const blob = new Blob([json], {type:'application/json'}), url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = nome; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      DB.markBackup();
+      btn.textContent = 'Backup protegido gerado ✓';
+      msg.style.color = 'var(--green,#1f6f5b)'; msg.textContent = 'Arquivo baixado: ' + nome + '. Guarde a senha!';
+      const file = new File([json], nome, {type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        document.getElementById('db-bkp-share').innerHTML = '<button class="btn outline block" style="margin-top:10px" id="db-bkp-sharebtn">Compartilhar (Drive, e-mail…)</button>';
+        document.getElementById('db-bkp-sharebtn').onclick = async function(){ try{ await navigator.share({files:[file], title:'Backup protegido'}); }catch(e){} };
+      }
+    }catch(e){
+      btn.disabled = false; btn.textContent = 'Gerar backup protegido'; msg.textContent = 'Não foi possível gerar o backup protegido neste navegador.';
+    }
+  };
+
+  /* ---- importar: reconhece arquivo protegido e pede a senha; arquivo comum segue o fluxo de sempre ---- */
+  const importAntes = importBackup;
+  importBackup = function(event){
+    const input = event && event.target, file = input && input.files && input.files[0];
+    if(!file) return importAntes.apply(this, arguments);
+    const reader = new FileReader();
+    reader.onload = function(){
+      let obj = null; try{ obj = JSON.parse(reader.result); }catch(e){}
+      if(obj && obj.formato === 'backup-protegido-v1'){ input.value = ''; DB.askBackupPassword(obj); }
+      else importAntes.call(window, event);
+    };
+    reader.onerror = function(){ importAntes.call(window, event); };
+    reader.readAsText(file);
+  };
+  DB.askBackupPassword = function(obj){
+    DB._pendingEnc = obj;
+    toggleDrawer(false);
+    openSheet('Backup protegido',
+      '<p>Este backup é protegido por senha. Digite a senha que você criou ao exportar.</p>'
+      + '<label for="db-bkp-open">Senha do backup</label><input class="db-field" id="db-bkp-open" type="password" autocomplete="off" onkeydown="if(event.key===\'Enter\')DB.submitBackupPassword()">'
+      + '<p id="db-bkp-omsg" class="muted" style="color:var(--red,#b3261e);min-height:1.2em"></p>'
+      + '<button class="btn block" onclick="DB.submitBackupPassword()">Abrir backup</button>');
+  };
+  DB.submitBackupPassword = async function(){
+    const pass = document.getElementById('db-bkp-open').value, msg = document.getElementById('db-bkp-omsg');
+    msg.textContent = 'Abrindo…';
+    let texto;
+    try{ texto = await DB.decryptBackupText(DB._pendingEnc, pass); }
+    catch(e){ msg.textContent = 'Senha incorreta ou arquivo danificado.'; return; }
+    closeSheet();
+    const f = new File([texto], 'backup.json', {type:'application/json'});
+    importAntes.call(window, {target:{files:[f], value:''}});
+  };
+
+  /* ---- botão no menu, logo abaixo de "Exportar backup" ---- */
+  const menuAntes = DB.menuActions;
+  DB.menuActions = function(){
+    menuAntes.apply(this, arguments);
+    const velho = document.getElementById('db-btn-bkp-prot'); if(velho) velho.remove();
+    const alvo = [...document.querySelectorAll('.drawerFoot button')].find(b => /Exportar backup/i.test(b.textContent));
+    if(alvo) alvo.insertAdjacentHTML('afterend', '<button class="drawerAction" id="db-btn-bkp-prot" onclick="DB.openProtectedBackup()">🔐 Exportar backup protegido (com senha)</button>');
+  };
+})();
+</script>
+<script>
+/* ===== Correção do 13º/vale: aviso + botão "Corrigir" + checagem na Conferência ===== */
+(function(){
+  if(!window.DB) return;
+  const esc = s => DB.esc(String(s==null?'':s));
+  const rm = v => DB.hidden ? '••••••' : DB.rawMoney(v);
+  const EXEMPT = /\b13(?!\d)|d[eé]cimo|f[eé]rias|b[oô]nus|\bplr\b/i;
+
+  /* salários já baixados em que o vale comeu o valor (entrou R$ 0) ou que são 13º/férias/bônus */
+  DB.valeProblems = function(){
+    return (state.lancamentos||[]).filter(l => !l.trashed && l.applied && l.type==='entrada' && l.category==='Salário'
+      && Number(l._consumedVale||0) > 0 && (Number(l._creditedAmount||0) <= 0.004 || EXEMPT.test(l.desc||'')));
+  };
+  DB.fixSalaryNoVale = function(id, silencioso){
+    const l = state.lancamentos.find(x=>x.id===id); if(!l || !l.applied || l.category!=='Salário') return false;
+    const c = Number(l._consumedVale||0); if(!(c > 0)) return false;
+    if(!silencioso && !confirm('Corrigir "'+l.desc+'"?\n\n• O valor inteiro ('+DB.rawMoney(l.amount)+') passa a contar no saldo (+'+DB.rawMoney(c)+').\n• O vale de '+DB.rawMoney(c)+' volta a ficar pendente e será descontado no próximo salário.\n\nSe foi sem querer, dá pra desfazer em Histórico > Desfazer última ação.')) return false;
+    snapshot();
+    state.saldo = DB.roundMoney(Number(state.saldo||0) + c);
+    state.pendingSalaryDeduction = DB.roundMoney(Number(state.pendingSalaryDeduction||0) + c);
+    pushMovement('credito', 'Correção: '+l.desc+' (vale não descontado)', c);
+    l._creditedAmount = Number(l.amount||0); l._consumedVale = 0; l.noVale = true;
+    logHist('Correção de salário: '+l.desc+' — +'+DB.rawMoney(c)+' no saldo; vale de '+DB.rawMoney(c)+' voltou a ficar pendente');
+    if(!silencioso){ save(); closeSheet(); render(); toast('Corrigido: +'+DB.rawMoney(c)+' no saldo · vale pendente '+DB.rawMoney(state.pendingSalaryDeduction)); }
+    return true;
+  };
+  DB.valeFixHTML = function(){
+    const p = DB.valeProblems(); if(!p.length) return '';
+    return '<div class="card" style="border:2px solid var(--red,#b3261e)"><h3>⚠ Salário com vale descontado</h3>'
+      + p.map(l => '<p><b>'+esc(l.desc)+'</b><br>Lançado '+esc(rm(l.amount))+' · entrou no saldo <b>'+esc(rm(l._creditedAmount))+'</b> · vale descontado '+esc(rm(l._consumedVale))+'.</p>'
+        + '<button class="btn block" onclick="DB.fixSalaryNoVale(\''+l.id+'\')">Receber o valor inteiro e manter o vale para o próximo salário</button>').join('')
+      + '<p class="muted" style="font-size:12.5px">13º salário, férias e bônus não descontam vale. O desconto continua no salário normal do mês.</p></div>';
+  };
+  const confCheckAntes = DB.conferenceCheck;
+  DB.conferenceCheck = function(){
+    const r = confCheckAntes.apply(this, arguments), p = DB.valeProblems();
+    if(p.length) r.unshift({status:'warn', titulo:'Salário com vale descontado', detalhe:p.length+' recebimento(s) em que o vale foi descontado sem dever (13º, férias, bônus ou salário que entrou zerado). Use o botão no topo desta tela.', itens:p.map(l=>({t:l.desc, s:'lançado '+rm(l.amount)+' · entrou '+rm(l._creditedAmount), v:''}))});
+    return r;
+  };
+  const confHtmlAntes = DB.conferenceHTML;
+  DB.conferenceHTML = function(){ return DB.valeFixHTML() + confHtmlAntes.apply(this, arguments); };
+
+  /* aviso automático ao abrir o app (uma vez por sessão) */
+  DB._valeAvisado = false;
+  setInterval(function(){
+    try{
+      if(DB._valeAvisado || !(state && state.lancamentos && state.lancamentos.length)) return;
+      const app = document.getElementById('app'); if(!app || getComputedStyle(app).display==='none') return;
+      const p = DB.valeProblems(); if(!p.length){ DB._valeAvisado = true; return; }
+      DB._valeAvisado = true;
+      openSheet('Encontrei um problema no seu saldo',
+        '<p>Um salário foi baixado e o <b>vale foi descontado dele sem precisar</b>, então o valor não entrou no saldo.</p>'
+        + p.map(l=>'<p><b>'+esc(l.desc)+'</b><br>Lançado '+esc(rm(l.amount))+' · entrou no saldo <b>'+esc(rm(l._creditedAmount))+'</b> · vale descontado '+esc(rm(l._consumedVale))+'</p>').join('')
+        + '<p class="muted" style="font-size:12.5px">Corrigindo, o valor inteiro entra no saldo e o vale (que você já recebeu) fica pendente para ser descontado no próximo salário normal.</p>'
+        + '<button class="btn block" onclick="DB.valeFixAll()">Corrigir agora</button>'
+        + '<button class="btn outline block" style="margin-top:8px" onclick="closeSheet()">Depois</button>');
+    }catch(e){}
+  }, 2000);
+  DB.valeFixAll = function(){
+    const p = DB.valeProblems(); if(!p.length){ closeSheet(); return; }
+    const total = p.reduce((s,l)=>s+Number(l._consumedVale||0),0);
+    if(!confirm('Corrigir '+p.length+' recebimento(s)?\n\nO saldo aumenta '+DB.rawMoney(total)+' e o vale volta a ficar pendente para o próximo salário.\nSe foi sem querer, dá pra desfazer em Histórico > Desfazer última ação.')) return;
+    snapshot();
+    p.forEach(l => DB.fixSalaryNoVale(l.id, true));
+    save(); closeSheet(); render(); toast('Corrigido: +'+DB.rawMoney(total)+' no saldo · saldo agora '+DB.rawMoney(state.saldo));
+  };
+
+  /* quando um salário descontar vale, avisa claramente quanto entrou */
+  const aplicarAntes = applyLancEffect;
+  applyLancEffect = function(l){
+    const jaAplicado = !!(l && l.applied);
+    const r = aplicarAntes.apply(this, arguments);
+    if(!jaAplicado && l && l.type==='entrada' && l.category==='Salário' && Number(l._consumedVale||0) > 0){
+      setTimeout(function(){ toast('Salário: entrou '+DB.rawMoney(l._creditedAmount)+' no saldo (vale de '+DB.rawMoney(l._consumedVale)+' descontado)'); }, 700);
+    }
+    return r;
+  };
+})();
+</script>
+<script>
+(function(){ const s=document.createElement('style'); s.textContent='#toast,.toast{pointer-events:none !important}'; document.head.appendChild(s); })();
+/* ===== 13º / férias / bônus são entradas comuns: formulário e Didi também dizem isso ===== */
+(function(){
+  if(!window.DB) return;
+  const EXEMPT = /\b13(?!\d)|d[eé]cimo|f[eé]rias|b[oô]nus|\bplr\b/i;
+  const abrirAntes = openLancForm;
+  openLancForm = function(){
+    const r = abrirAntes.apply(this, arguments);
+    const nota = () => {
+      const g = id => document.getElementById(id), note = g('salary-preview');
+      if(!note || !g('f_type_es')) return;
+      const tipo = g('f_type_es').value, cat = DB.salaryCategory ? DB.salaryCategory(g('f_cat') && g('f_cat').value) : null, desc = (g('f_desc') && g('f_desc').value) || '';
+      if(tipo==='entrada' && cat==='Salário' && EXEMPT.test(desc)){
+        const v = DB.parseAmount(g('f_amount') && g('f_amount').value) || 0;
+        note.textContent = 'Entrada comum (13º, férias ou bônus): não desconta o vale. Entra o valor inteiro no saldo'+(v?': '+DB.rawMoney(v):'')+'. O vale pendente ('+DB.rawMoney(state.pendingSalaryDeduction||0)+') continua para o próximo salário.';
+      }
+    };
+    ['f_type_es','f_cat','f_amount','f_status'].forEach(id => { const e = document.getElementById(id); if(e){ e.addEventListener('change', nota); e.addEventListener('input', nota); } });
+    const d = document.getElementById('f_desc');
+    if(d) d.addEventListener('input', function(){ const a = document.getElementById('f_amount'); if(a) a.dispatchEvent(new Event('input')); nota(); });
+    nota();
+    return r;
+  };
+  const recAntes = DB.salaryReceipt;
+  DB.salaryReceipt = function(l){
+    if(l && l.type==='entrada' && l.category==='Salário' && !(Number(l._consumedVale||0) > 0)){
+      const p = Number(state.pendingSalaryDeduction||0);
+      return 'Salvei, Jhony. '+DB.rawMoney(l.amount)+' em '+(l.desc||'Salário')+' entraram inteiros no saldo, sem desconto de vale.'+(p>0?' O vale de '+DB.rawMoney(p)+' continua pendente para o próximo salário.':'');
+    }
+    return recAntes.apply(this, arguments);
   };
 })();
 </script>
